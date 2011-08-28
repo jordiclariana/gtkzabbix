@@ -1,0 +1,13 @@
+* Implement libnotify alerts.
+* Create notify settings tab:
+	- Duration
+	- Min priority
+	- For local acknowledge triggers or not. 
+* Option not to show in dashboard acknowledge triggers (maybe in the same dashboard, something like a filter but not on serverside)
+* False alarms counter-mesures: only beep if X minutes/seconds since alarm on.
+* False alarms counter-mesures: not beep if new alarm has been deleted recently (X minutes/seconds).
+* Implement multiple selection on dashboard grid.
+* Implement contextual menu on selection/multiple-selection on dashboard:
+	- (bulk) Acknowledge serverside trigger.
+	- ...?
+* Implement big window with flashing colours for very visual alarm.
