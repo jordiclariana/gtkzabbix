@@ -17,7 +17,7 @@ import configuration
 from zbx_priorities import zbx_priorities
 from resource_path import resource_path
 from zbx_connections import zbx_connections
-from notify import notify
+import notify
 import settingsWindow
 
 class GTKZabbix:
@@ -98,6 +98,11 @@ class GTKZabbix:
             0,
             alias]
         )
+        
+        # libNotify
+        if ((time.time() - int(trigger.get('lastchange'))) < 300):
+            notify.notify(trigger.get('priority'), alias + ": " + trigger.get('host'), trigger.get('description'), 10)
+
         print "Add {0} - {1} - {2}".format(trigger.get('triggerid'),
             trigger.get('host'), trigger.get('description'))
         
@@ -216,7 +221,6 @@ class GTKZabbix:
         self.conf_threaded = configuration.configuration()
         self.zbxConnections = zbx_connections(self.conf_threaded)
         self.zbxConnections.init()
-        self.notify = notify()
         first = True
         while True:
             print "{0} | Updating dashboard".format(datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))

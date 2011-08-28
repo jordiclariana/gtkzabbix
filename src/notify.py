@@ -7,11 +7,10 @@ import pynotify
 from zbx_priorities import zbx_priorities
 
 class notify:
-    def __init__(self):
-        if not pynotify.init("ZabbixNotify"):
+    def __init__(self, priority, title, message, timeout):
+        if not pynotify.init("GTKZabbix"):
             print "there was a problem initializing the pynotify module"
-    
-    def notify(self, priority, title, message):
-        if pynotify.is_initted():
+        else:
             n = pynotify.Notification(title, message, "file://" + zbx_priorities(priority).get_icon())
+            n.set_timeout(timeout)
             n.show()

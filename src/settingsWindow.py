@@ -34,6 +34,8 @@ class settingsWindow:
         self.tv_servers = self.settingsBuilder.get_object("tv_servers")
         self.ls_priorities_sound = self.settingsBuilder.get_object("ls_priorities_sound")
         self.ls_priorities_notify = self.settingsBuilder.get_object("ls_priorities_notify")
+        self.cb_enablenotify = self.settingsBuilder.get_object("cb_enablenotify")
+        self.box_notify = self.settingsBuilder.get_object("box_notify")
         
         self.settings_object_list = {}
         for setting in self.__SETTINGS_LIST:
@@ -51,6 +53,7 @@ class settingsWindow:
            'on_bt_applychanges_clicked': self.server_applychanges,
            'on_bt_delserver_clicked': self.server_delete,
            'on_bt_addserver_clicked': self.server_add,
+           'on_cb_enablenotify_toggled': self.enablenotify_changes,
         }
 
         self.settingsBuilder.connect_signals(self.events_dic)
@@ -160,7 +163,10 @@ class settingsWindow:
         self.txt_serverusername.modify_base(gtk.STATE_NORMAL, gtk.gdk.color_parse("#FFFFFF"))
         self.cb_serverenabled.set_active(False)
         self.cb_serverenabled.modify_base(gtk.STATE_NORMAL, gtk.gdk.color_parse("#FFFFFF"))
-
+        
+    def enablenotify_changes(self, widget, data = None):
+        self.box_notify.set_sensitive(widget.get_active())
+        
     def server_clicked(self, widget, event = None):
 #        myselection = widget.get_selection()
 #        model, selection = myselection.get_selected()
