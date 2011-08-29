@@ -33,6 +33,7 @@ class GTKZabbix:
         self.list_zabbix_model = self.builder.get_object("treeZabbix")
         self.list_zabbix_store = self.builder.get_object("listZabbix")
         self.list_zabbix_store_ack = self.builder.get_object("crt_ack")
+        self.lbl_lastupdated_num = self.builder.get_object("lbl_lastupdated_num")
 
         self.window.set_icon_from_file(zbx_priorities().get_icon())
         
@@ -81,7 +82,7 @@ class GTKZabbix:
         if self.conf_main.get_setting('showdashboardinit'):
             self.conf_main.close()
             del self.conf_main
-            self.window.show()
+            self.window.present()
 
     def append_zbx_trigger(self, trigger, alias):
         self.list_zabbix_store.append([
@@ -213,7 +214,7 @@ class GTKZabbix:
                     print "Error parsing triggers. Not dict and not list. Is: {0}".format(type(this_trigger))
 
             except Exception as e:
-                print "Unexpected error getting triggers from {0}:\n\t{1}".format(self.conf_threaded.get_server(zAPIAlias, 'alias'),e)
+                print "GTKZabbix | Unexpected error getting triggers from {0}:\n\t{1}".format(zAPIAlias, e)
              
         return triggers
     
@@ -244,13 +245,16 @@ class GTKZabbix:
                 print "GTKZabbixNotify | Exception deleting triggers:\n\t{0}".format(e)
             self.auto_ack(self.conf_threaded.get_setting('ackafterseconds'))    
             max_prio = self.get_play_alarm_priority()
+            self.lbl_lastupdated_num.set_text(datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
             gtk.gdk.threads_leave()
+            
             if deleted and self.conf_threaded.get_setting('sounddelete'):
                 self.play_sound(-1)
                 if max_prio >= 0:
                     time.sleep(0.75)
             if max_prio >= 0:
                 self.play_sound(max_prio)
+            
             if once:
                 break
             # self.notify.notify(4, "Server Name", "Trigger description")
@@ -288,7 +292,7 @@ class GTKZabbix:
         model.set_value(iter, 10, not cell.get_active())        
     
     def show(self, widget, data=None):
-        self.window.show_all()
+        self.window.present()
         return True
     
     def hide(self, widget, data=None):

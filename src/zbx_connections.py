@@ -24,7 +24,6 @@ class zbx_connections:
                 try:
                     self.zAPIs[alias].login(self.conf.get_server(zapiID, 'username'), 
                                              self.conf.get_password(self.conf.get_server(zapiID, 'password')))
-                    print "Zabbix API Version: %s" % self.zAPIs[alias].api_version()
                     print "Logged in {0}: {1}".format(self.conf.get_server(zapiID, 'alias'), self.zAPIs[alias].test_login())
                 except ZabbixAPIException, e:
                     sys.stderr.write(str(e) + '\n')
@@ -42,17 +41,26 @@ class zbx_connections:
             alias = self.conf.get_server(zapiID, 'alias')
             if self.conf.get_server(zapiID, 'enabled') == True:
                 alias = self.conf.get_server(zapiID, 'alias')
-                if not self.zAPIs.has_key(alias):
+                if not self.zAPIs.has_key(alias): # New server
                     self.zAPIs[alias] = ZabbixAPI(server=self.conf.get_server(zapiID, 'uri'),log_level=0)
                     try:
                         self.zAPIs[alias].login(self.conf.get_server(zapiID, 'username'), 
                                                  self.conf.get_password(self.conf.get_server(zapiID, 'password')))
-                        print "Zabbix API Version: %s" % self.zAPIs[alias].api_version()
                         print "Logged in {0}: {1}".format(self.conf.get_server(zapiID, 'alias'), self.zAPIs[alias].test_login())
                     except ZabbixAPIException, e:
                         sys.stderr.write(str(e) + '\n')
                     except Exception as e:
                         print "zbx_connections | Unexpected error connecting to {0}:\n\t{1}".format(alias,e)
+                else: # Check if auth session is still good
+                    if not self.zAPIs[alias].test_login():
+                        try:
+                            self.zAPIs[alias].login(self.conf.get_server(zapiID, 'username'), 
+                                                    self.conf.get_password(self.conf.get_server(zapiID, 'password')))
+                            print "Relogged in {0}: {1}".format(self.conf.get_server(zapiID, 'alias'), self.zAPIs[alias].test_login())
+                        except ZabbixAPIException, e:
+                            sys.stderr.write(str(e) + '\n')
+                        except Exception as e:
+                            print "zbx_connections | Unexpected error connecting to {0}:\n\t{1}".format(alias,e)
             else:
                 if self.zAPIs.has_key(alias):
                     del self.zAPIs[alias]
