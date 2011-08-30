@@ -31,8 +31,8 @@
     </columns>
   </object>
   <object class="GtkWindow" id="mainWindow">
-    <property name="width_request">250</property>
-    <property name="height_request">250</property>
+    <property name="width_request">600</property>
+    <property name="height_request">400</property>
     <property name="can_focus">False</property>
     <property name="title" translatable="yes">GTKZabbix</property>
     <signal name="delete-event" handler="on_mainWindow_delete_event" swapped="no"/>
@@ -92,7 +92,7 @@
                 <property name="search_column">5</property>
                 <child>
                   <object class="GtkTreeViewColumn" id="vzalias">
-                    <property name="sizing">autosize</property>
+                    <property name="resizable">True</property>
                     <property name="title" translatable="yes">Zabbix Server</property>
                     <property name="clickable">True</property>
                     <property name="reorderable">True</property>
@@ -108,8 +108,7 @@
                 </child>
                 <child>
                   <object class="GtkTreeViewColumn" id="host">
-                    <property name="sizing">autosize</property>
-                    <property name="fixed_width">50</property>
+                    <property name="resizable">True</property>
                     <property name="title" translatable="yes">Hostname</property>
                     <property name="clickable">True</property>
                     <property name="reorderable">True</property>
@@ -125,8 +124,7 @@
                 </child>
                 <child>
                   <object class="GtkTreeViewColumn" id="description">
-                    <property name="sizing">autosize</property>
-                    <property name="fixed_width">50</property>
+                    <property name="resizable">True</property>
                     <property name="title" translatable="yes">Description</property>
                     <property name="clickable">True</property>
                     <property name="reorderable">True</property>
@@ -142,8 +140,7 @@
                 </child>
                 <child>
                   <object class="GtkTreeViewColumn" id="vlastchange">
-                    <property name="sizing">autosize</property>
-                    <property name="fixed_width">50</property>
+                    <property name="resizable">True</property>
                     <property name="title" translatable="yes">LastChange</property>
                     <property name="clickable">True</property>
                     <property name="reorderable">True</property>
@@ -160,10 +157,7 @@
                 <child>
                   <object class="GtkTreeViewColumn" id="vpriority">
                     <property name="resizable">True</property>
-                    <property name="sizing">fixed</property>
-                    <property name="fixed_width">25</property>
                     <property name="title" translatable="yes">Priority</property>
-                    <property name="expand">True</property>
                     <property name="clickable">True</property>
                     <property name="reorderable">True</property>
                     <property name="sort_indicator">True</property>
@@ -182,7 +176,6 @@
                 </child>
                 <child>
                   <object class="GtkTreeViewColumn" id="ack">
-                    <property name="sizing">autosize</property>
                     <property name="title" translatable="yes">ACK</property>
                     <property name="clickable">True</property>
                     <property name="reorderable">True</property>
