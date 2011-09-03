@@ -19,6 +19,7 @@ from resource_path import resource_path
 from zbx_connections import zbx_connections
 import notify
 import settingsWindow
+import tooltip
 
 class GTKZabbix:
     
@@ -39,6 +40,7 @@ class GTKZabbix:
         
         self.events_dic = {
            'on_mainWindow_delete_event': self.hide,
+           'on_treeZabbix_button_press_event': self.treeZabbix_click,
         }
 
         self.builder.connect_signals(self.events_dic)
@@ -78,11 +80,30 @@ class GTKZabbix:
         #gobject.timeout_add(750, self.priocolumn_blink)
 
         #self.window.fullscreen()
+        
+        self.tooltipWindow = tooltip.tooltip()
+        
         self.window.maximize()
         if self.conf_main.get_setting('showdashboardinit'):
             self.conf_main.close()
             del self.conf_main
             self.window.present()
+
+    def treeZabbix_click(self, widget, event):
+        if event.button == 1 and event.type == gtk.gdk._2BUTTON_PRESS:
+            myselection = widget.get_selection()
+            model, selection = myselection.get_selected()
+            if isinstance(selection, gtk.TreeIter):
+                rootwin = widget.get_screen().get_root_window()
+                x, y, mods = rootwin.get_pointer()
+                self.tooltipWindow.show(x, y, '<b>{0}</b>: <i>{1}</i>'.format(model.get_value(selection, 4), model.get_value(selection, 5)))
+                
+            else:
+                pprint(selection)
+            return True
+        elif event.button == 1 and event.type == gtk.gdk.BUTTON_PRESS:
+            self.tooltipWindow.hide()
+            return False
 
     def append_zbx_trigger(self, trigger, alias):
         self.list_zabbix_store.append([
@@ -99,7 +120,7 @@ class GTKZabbix:
             0,
             alias]
         )
-        
+
         # libNotify
         if ((time.time() - int(trigger.get('lastchange'))) < 300):
             notify.notify(trigger.get('priority'), alias + ": " + trigger.get('host'), trigger.get('description'), 10)
@@ -295,6 +316,7 @@ class GTKZabbix:
         return True
     
     def hide(self, widget, data=None):
+        self.tooltipWindow.hide()
         self.window.hide()
         return True
             
