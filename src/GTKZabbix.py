@@ -134,7 +134,6 @@ class GTKZabbix:
                 if int(self.list_zabbix_store.get_value(iter, 0)) == int(trigger[1].get('triggerid')) and \
                  self.list_zabbix_store.get_value(iter, 11) == trigger[0]:
                     delete_flag = False
-                    break
             if delete_flag:
                 print "Delete {0} - {1} - {2}".format(self.list_zabbix_store.get_value(iter, 0),
                       self.list_zabbix_store.get_value(iter, 4), self.list_zabbix_store.get_value(iter, 5))

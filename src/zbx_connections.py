@@ -52,7 +52,10 @@ class zbx_connections:
                     except Exception as e:
                         print "zbx_connections | Unexpected error connecting to {0}:\n\t{1}".format(alias,e)
                 else: # Check if auth session is still good
-                    if not self.zAPIs[alias].test_login():
+                    try:
+                        if not self.zAPIs[alias].test_login():
+                            raise Exception
+                    except:
                         try:
                             self.zAPIs[alias].login(self.conf.get_server(zapiID, 'username'), 
                                                     self.conf.get_password(self.conf.get_server(zapiID, 'password')))
