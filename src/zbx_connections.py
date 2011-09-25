@@ -20,7 +20,7 @@ class zbx_connections:
         for zapiID in range(0, self.conf.get_total_servers()):
             if self.conf.get_server(zapiID, 'enabled') == True:
                 alias = self.conf.get_server(zapiID, 'alias')
-                self.zAPIs[alias] = ZabbixAPI(server=self.conf.get_server(zapiID, 'uri'),log_level=0)
+                self.zAPIs[alias] = ZabbixAPI(server=self.conf.get_server(zapiID, 'uri'), log_level=0)
                 try:
                     self.zAPIs[alias].login(self.conf.get_server(zapiID, 'username'), 
                                              self.conf.get_password(self.conf.get_server(zapiID, 'password')))
@@ -42,7 +42,7 @@ class zbx_connections:
             if self.conf.get_server(zapiID, 'enabled') == True:
                 alias = self.conf.get_server(zapiID, 'alias')
                 if not self.zAPIs.has_key(alias): # New server
-                    self.zAPIs[alias] = ZabbixAPI(server=self.conf.get_server(zapiID, 'uri'),log_level=0)
+                    self.zAPIs[alias] = ZabbixAPI(server=self.conf.get_server(zapiID, 'uri'), log_level=0)
                     try:
                         self.zAPIs[alias].login(self.conf.get_server(zapiID, 'username'), 
                                                  self.conf.get_password(self.conf.get_server(zapiID, 'password')))
@@ -57,6 +57,8 @@ class zbx_connections:
                             raise Exception
                     except:
                         try:
+                            # Reinstance ZabbixAPI because it can be an URI change
+                            self.zAPIs[alias] = ZabbixAPI(server=self.conf.get_server(zapiID, 'uri'), log_level=0)
                             self.zAPIs[alias].login(self.conf.get_server(zapiID, 'username'), 
                                                     self.conf.get_password(self.conf.get_server(zapiID, 'password')))
                             print "Relogged in {0}: {1}".format(self.conf.get_server(zapiID, 'alias'), self.zAPIs[alias].test_login())

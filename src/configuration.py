@@ -53,7 +53,7 @@ class configuration:
         
     def init_db(self):
         SQLcur = self.SQLconn.cursor()
-        self.SQLcur.executescript("""
+        SQLcur.executescript("""
             CREATE TABLE servers (
                 'alias', 'uri', 'username', 'password', 'enabled'
             );
