@@ -41,6 +41,7 @@ class GTKZabbix:
         self.events_dic = {
            'on_mainWindow_delete_event': self.hide,
            'on_treeZabbix_button_press_event': self.treeZabbix_click,
+           'on_sb_fontsize_value_changed': self.change_fontsize,
         }
 
         self.builder.connect_signals(self.events_dic)
@@ -89,6 +90,14 @@ class GTKZabbix:
             del self.conf_main
             self.window.present()
 
+    def change_fontsize(self, widget, data = None):
+        adj_fontsize = self.builder.get_object("adj_fontsize")
+        
+        iter = self.list_zabbix_store.get_iter_first()
+        while iter:
+            self.list_zabbix_store.set_value(iter, 12, int(adj_fontsize.get_value())*1000)
+            iter = self.list_zabbix_store.iter_next(iter)
+
     def treeZabbix_click(self, widget, event):
         if event.button == 1 and event.type == gtk.gdk._2BUTTON_PRESS:
             myselection = widget.get_selection()
@@ -106,6 +115,7 @@ class GTKZabbix:
             return False
 
     def append_zbx_trigger(self, trigger, alias):
+        adj_fontsize = self.builder.get_object("adj_fontsize")
         self.list_zabbix_store.append([
             int(trigger.get('triggerid')),
             int(trigger.get('hostid')),
@@ -118,9 +128,10 @@ class GTKZabbix:
             zbx_priorities(trigger.get('priority')).get_color(0),
             zbx_priorities(trigger.get('priority')).get_color(1),
             0,
-            alias]
+            alias,
+            int(adj_fontsize.get_value())*1000]
         )
-
+        
         # libNotify
         if ((time.time() - int(trigger.get('lastchange'))) < 300):
             notify.notify(trigger.get('priority'), alias + ": " + trigger.get('host'), trigger.get('description'), 10)
@@ -160,10 +171,9 @@ class GTKZabbix:
                       self.list_zabbix_store.get_value(iter, 4), self.list_zabbix_store.get_value(iter, 5))
                 deleted = True
                 self.list_zabbix_store.remove(iter)
+                iter = self.list_zabbix_store.get_iter_first()
             else:
                 iter = self.list_zabbix_store.iter_next(iter)
-            if not iter:
-                break
         return deleted
     
     def get_maxprio_zbx_triggers(self):
@@ -263,7 +273,7 @@ class GTKZabbix:
                 deleted = self.del_zbx_triggers(triggers)
             except Exception as e:
                 print "GTKZabbixNotify | Exception deleting triggers:\n\t{0}".format(e)
-            self.auto_ack(self.conf_threaded.get_setting('ackafterseconds'))    
+            self.auto_ack(self.conf_threaded.get_setting('ackafterseconds'))
             max_prio = self.get_play_alarm_priority()
             self.lbl_lastupdated_num.set_text(datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
             gtk.gdk.threads_leave()

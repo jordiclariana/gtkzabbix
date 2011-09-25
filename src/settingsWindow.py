@@ -14,7 +14,6 @@ class settingsWindow:
     
     __SETTINGS_LIST = [ "checkinterval", "soundenable", "ackalloninit", "playsoundiftriggerlastchange", 
                        "showdashboardinit", "playifprio", "ackafterseconds", "sounddelete" ]
-    __SERVER_CLICKED = False
     
     def __init__(self):
         filename = resource_path("glade/settings.glade").get()
@@ -28,7 +27,7 @@ class settingsWindow:
         self.txt_serverusername = self.settingsBuilder.get_object("txt_serverusername")
         self.txt_serverpassword = self.settingsBuilder.get_object("txt_serverpassword")
         self.cb_serverenabled = self.settingsBuilder.get_object("cb_serverenabled")
-        self.bt_applychanges = self.settingsBuilder.get_object("bt_applychanges")
+        self.bt_editserver = self.settingsBuilder.get_object("bt_editserver")
         self.bt_addserver = self.settingsBuilder.get_object("bt_addserver")
         self.bt_delserver = self.settingsBuilder.get_object("bt_delserver")
         self.tv_servers = self.settingsBuilder.get_object("tv_servers")
@@ -36,6 +35,7 @@ class settingsWindow:
         self.ls_priorities_notify = self.settingsBuilder.get_object("ls_priorities_notify")
         self.cb_enablenotify = self.settingsBuilder.get_object("cb_enablenotify")
         self.box_notify = self.settingsBuilder.get_object("box_notify")
+        self.serversWindow = self.settingsBuilder.get_object("serversWindow")
         
         self.settings_object_list = {}
         for setting in self.__SETTINGS_LIST:
@@ -50,10 +50,12 @@ class settingsWindow:
            'on_txt_serverusername_changed': self.server_field_changed,
            'on_txt_serverpassword_changed': self.server_field_changed,
            'on_cb_serverenabled_toggled': self.server_field_changed,
-           'on_bt_applychanges_clicked': self.server_applychanges,
            'on_bt_delserver_clicked': self.server_delete,
            'on_bt_addserver_clicked': self.server_add,
            'on_cb_enablenotify_toggled': self.enablenotify_changes,
+           'on_bt_editserver_clicked': self.server_edit,
+           'on_bt_servers_save_clicked': self.servers_save,
+           'on_bt_servers_cancel_clicked': self.servers_cancel,
         }
 
         self.settingsBuilder.connect_signals(self.events_dic)
@@ -95,7 +97,7 @@ class settingsWindow:
         self.servers_liststore.clear()
         servers = self.conf.get_servers()
         for server in servers:
-            self.servers_liststore.append([server['alias']])
+            self.servers_liststore.append([server['alias'], server['uri'], server['username'], server['enabled']])
         
     def save(self, widget, data = None):
         for setting in self.__SETTINGS_LIST:
@@ -122,15 +124,11 @@ class settingsWindow:
 
     def cancel(self, widget, data = None):
         self.settingsWindow.destroy()
-        
+
     def server_field_changed(self, widget, data = None):
-        if not self.__SERVER_CLICKED:
-            widget.modify_base(gtk.STATE_NORMAL, gtk.gdk.color_parse("#FFFF00"))
-            self.bt_addserver.set_sensitive(False)
-            self.bt_delserver.set_sensitive(False)
-            self.bt_applychanges.set_sensitive(True)
+        widget.modify_base(gtk.STATE_NORMAL, gtk.gdk.color_parse("#FFFF00"))
     
-    def server_applychanges(self, widget, data = None):
+    def servers_save(self, widget, data = None):
         self.conf.set_server(self.txt_serveralias.get_text() , self.txt_serveruri.get_text(),
                              self.txt_serverusername.get_text(), self.txt_serverpassword.get_text(),
                              self.cb_serverenabled.get_active())
@@ -140,10 +138,28 @@ class settingsWindow:
         self.txt_serverusername.modify_base(gtk.STATE_NORMAL, gtk.gdk.color_parse("#FFFFFF"))
         self.cb_serverenabled.modify_base(gtk.STATE_NORMAL, gtk.gdk.color_parse("#FFFFFF"))
         self.fill_servers_list()
-        self.bt_applychanges.set_sensitive(False)
-        self.bt_addserver.set_sensitive(True)
-        self.bt_delserver.set_sensitive(True)
-        self.fill_servers_list()
+        self.serversWindow.hide()
+
+    def servers_cancel(self, widget, data = None):
+        self.serversWindow.hide()
+
+    def server_edit(self, widget, data = None):
+        myselection = self.tv_servers.get_selection()
+        model, selection = myselection.get_selected()
+        if isinstance(selection, gtk.TreeIter):
+            selectedServer = self.conf.get_servers(
+                       self.servers_liststore.get_value(selection,0))[0]
+            self.txt_serveralias.set_text(selectedServer['alias'])
+            self.txt_serveralias.modify_base(gtk.STATE_NORMAL, gtk.gdk.color_parse("#FFFFFF"))
+            self.txt_serverpassword.set_text(self.conf.get_password(selectedServer['password']))
+            self.txt_serverpassword.modify_base(gtk.STATE_NORMAL, gtk.gdk.color_parse("#FFFFFF"))
+            self.txt_serveruri.set_text(selectedServer['uri'])
+            self.txt_serveruri.modify_base(gtk.STATE_NORMAL, gtk.gdk.color_parse("#FFFFFF"))
+            self.txt_serverusername.set_text(selectedServer['username'])
+            self.txt_serverusername.modify_base(gtk.STATE_NORMAL, gtk.gdk.color_parse("#FFFFFF"))
+            self.cb_serverenabled.set_active(selectedServer['enabled'])
+            self.cb_serverenabled.modify_base(gtk.STATE_NORMAL, gtk.gdk.color_parse("#FFFFFF"))
+            self.serversWindow.show()
     
     def server_delete(self, widget, data = None):
         myselection = self.tv_servers.get_selection()
@@ -163,14 +179,12 @@ class settingsWindow:
         self.txt_serverusername.modify_base(gtk.STATE_NORMAL, gtk.gdk.color_parse("#FFFFFF"))
         self.cb_serverenabled.set_active(False)
         self.cb_serverenabled.modify_base(gtk.STATE_NORMAL, gtk.gdk.color_parse("#FFFFFF"))
-        
+        self.serversWindow.show()
+
     def enablenotify_changes(self, widget, data = None):
         self.box_notify.set_sensitive(widget.get_active())
         
     def server_clicked(self, widget, event = None):
-#        myselection = widget.get_selection()
-#        model, selection = myselection.get_selected()
-#        if event.button == 3 and isinstance(selection, gtk.TreeIter):
         x = int(event.x)
         y = int(event.y)
         time = event.time
@@ -183,33 +197,20 @@ class settingsWindow:
         myselection = widget.get_selection()
         model, selection = myselection.get_selected()
         if isinstance(selection, gtk.TreeIter):
-            self.__SERVER_CLICKED = True
-            self.bt_applychanges.set_sensitive(False)
+            self.bt_editserver.set_sensitive(True)
             self.bt_addserver.set_sensitive(True)
             self.bt_delserver.set_sensitive(True)
+        else:
+            self.bt_editserver.set_sensitive(False)
+            self.bt_addserver.set_sensitive(True)
+            self.bt_delserver.set_sensitive(False)
 
-            selectedServer = self.conf.get_servers(
-                               self.servers_liststore.get_value(selection,0))[0]
-            
-            self.txt_serveralias.set_text(selectedServer['alias'])
-            self.txt_serveralias.modify_base(gtk.STATE_NORMAL, gtk.gdk.color_parse("#FFFFFF"))
-            self.txt_serverpassword.set_text(self.conf.get_password(selectedServer['password']))
-            self.txt_serverpassword.modify_base(gtk.STATE_NORMAL, gtk.gdk.color_parse("#FFFFFF"))
-            self.txt_serveruri.set_text(selectedServer['uri'])
-            self.txt_serveruri.modify_base(gtk.STATE_NORMAL, gtk.gdk.color_parse("#FFFFFF"))
-            self.txt_serverusername.set_text(selectedServer['username'])
-            self.txt_serverusername.modify_base(gtk.STATE_NORMAL, gtk.gdk.color_parse("#FFFFFF"))
-            self.cb_serverenabled.set_active(selectedServer['enabled'])
-            self.cb_serverenabled.modify_base(gtk.STATE_NORMAL, gtk.gdk.color_parse("#FFFFFF"))
-
-            self.__SERVER_CLICKED = False
-
-        if event.button == 3:
-            m = gtk.Menu()
-            i = gtk.MenuItem("Hello")
-            i.show()
-            m.append(i)
-            m.popup( None, None, None, event.button, time)
+        # if event.button == 3:
+        #     m = gtk.Menu()
+        #     i = gtk.MenuItem("Hello")
+        #     i.show()
+        #     m.append(i)
+        #     m.popup( None, None, None, event.button, time)
 
         return True
          
@@ -220,4 +221,3 @@ class settingsWindow:
 #        for selection in selections:
 #            iter = self.servers_liststore.get_iter(selection[0])
 
-        

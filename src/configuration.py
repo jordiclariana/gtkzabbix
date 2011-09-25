@@ -32,19 +32,19 @@ class configuration:
     
     def open_db(self):
         self.SQLconn = sqlite3.connect(self.defaultDBFile) #, check_same_thread = False)
-        self.SQLcur = self.SQLconn.cursor()
+        SQLcur = self.SQLconn.cursor()
         if self.defaultDBFile == ":memory:":
             self.init_db()
         else:
             try:
-                self.SQLcur.execute("SELECT * FROM servers")
-                self.SQLcur.execute("SELECT * FROM settings")
+                SQLcur.execute("SELECT * FROM servers")
+                SQLcur.execute("SELECT * FROM settings")
             except:
                 self.init_db()
         st = os.stat(self.defaultDBFile)
         if str(oct(stat.S_IMODE(st[stat.ST_MODE]))) != "0600":
             os.chmod(self.defaultDBFile,0600)
-        self.SQLcur.close()
+        SQLcur.close()
         
     def close_db(self):
         if self.defaultDBFile != ":memory:":
@@ -52,7 +52,7 @@ class configuration:
             self.SQLconn.close()
         
     def init_db(self):
-        self.SQLcur = self.SQLconn.cursor()
+        SQLcur = self.SQLconn.cursor()
         self.SQLcur.executescript("""
             CREATE TABLE servers (
                 'alias', 'uri', 'username', 'password', 'enabled'
@@ -72,16 +72,16 @@ class configuration:
             INSERT INTO settings VALUES ('sounddelete', 1);
 
         """)
-        self.SQLcur.close()
+        SQLcur.close()
 
     def set_server(self, alias, uri, username, password, enabled):
-        self.SQLcur = self.SQLconn.cursor()
+        SQLcur = self.SQLconn.cursor()
         if self.get_total_servers() == 0:
             self.fetch_servers()
 
         servers = self.get_servers(alias)
         if len(servers) == 0:
-            self.SQLcur.execute("INSERT INTO servers VALUES (?, ?, ?, ?, ?)",
+            SQLcur.execute("INSERT INTO servers VALUES (?, ?, ?, ?, ?)",
                                 ( alias, uri, username, self.set_password(password), enabled ))
         else:
             for server in servers:
@@ -91,20 +91,20 @@ class configuration:
                         server['enabled'] == enabled):
                     self.mod_server(alias, uri, username, self.set_password(password), enabled)
         self.SQLconn.commit()
-        self.SQLcur.close()
+        SQLcur.close()
     
     def mod_server(self, alias, uri, username, password, enabled):
-        self.SQLcur = self.SQLconn.cursor()
-        self.SQLcur.execute("UPDATE servers SET uri=?, username=?, password=?, enabled=? WHERE alias=?",
+        SQLcur = self.SQLconn.cursor()
+        SQLcur.execute("UPDATE servers SET uri=?, username=?, password=?, enabled=? WHERE alias=?",
                              (uri, username, password, enabled, alias))
         self.SQLconn.commit()
-        self.SQLcur.close()
+        SQLcur.close()
     
     def del_server(self, alias):
-        self.SQLcur = self.SQLconn.cursor()
-        self.SQLcur.execute("DELETE FROM servers WHERE alias=?", (alias,))
+        SQLcur = self.SQLconn.cursor()
+        SQLcur.execute("DELETE FROM servers WHERE alias=?", (alias,))
         self.SQLconn.commit()
-        self.SQLcur.close()
+        SQLcur.close()
         
     def get_servers(self, alias = None, enabled = None):
         servers = []
@@ -123,18 +123,18 @@ class configuration:
         return servers
 
     def fetch_servers(self):
-        self.SQLcur = self.SQLconn.cursor()
-        self.SQLcur.execute("SELECT * FROM servers")
+        SQLcur = self.SQLconn.cursor()
+        SQLcur.execute("SELECT * FROM servers")
         
         self.__SERVERS = []
-        for server in self.SQLcur.fetchall():
+        for server in SQLcur.fetchall():
             self.__SERVERS.append({'alias': server[self.__SERVERS_COLUMNS['alias']],
                                                                        'uri': server[self.__SERVERS_COLUMNS['uri']],
                                                                        'username': server[self.__SERVERS_COLUMNS['username']], 
                                                                        'password': server[self.__SERVERS_COLUMNS['password']], 
                                                                        'enabled': server[self.__SERVERS_COLUMNS['enabled']]}
                                                                        )
-        self.SQLcur.close()
+        SQLcur.close()
         
     def get_server(self, id, column):
         if id in range(0, len(self.__SERVERS)):
@@ -150,26 +150,26 @@ class configuration:
             return 0
         
     def get_setting(self, name):
-        self.SQLcur = self.SQLconn.cursor()
-        self.SQLcur.execute("SELECT value FROM settings WHERE name=?", (name,))
-        value = self.SQLcur.fetchall()
-        self.SQLcur.close()
+        SQLcur = self.SQLconn.cursor()
+        SQLcur.execute("SELECT value FROM settings WHERE name=?", (name,))
+        value = SQLcur.fetchall()
+        SQLcur.close()
         if len(value) > 0 and len(value[0]) > 0:
             return value[0][0]
         else:
             return None
         
     def set_setting(self, name, value):
-        self.SQLcur = self.SQLconn.cursor()
-        self.SQLcur.execute("SELECT value FROM settings WHERE name=?", (name,))
-        settings = self.SQLcur.fetchall()
+        SQLcur = self.SQLconn.cursor()
+        SQLcur.execute("SELECT value FROM settings WHERE name=?", (name,))
+        settings = SQLcur.fetchall()
         if len(settings) == 0:
-            self.SQLcur.execute("INSERT INTO settings VALUES (?,?)", (name, value))
+            SQLcur.execute("INSERT INTO settings VALUES (?,?)", (name, value))
         elif settings[0][0] != value:
-            self.SQLcur.execute("UPDATE settings SET value=? WHERE name=?",(value, name))
+            SQLcur.execute("UPDATE settings SET value=? WHERE name=?",(value, name))
         
         self.SQLconn.commit()
-        self.SQLcur.close()
+        SQLcur.close()
                 
     def close(self):
         self.close_db()

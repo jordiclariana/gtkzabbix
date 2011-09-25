@@ -2,6 +2,13 @@
 <interface>
   <requires lib="gtk+" version="2.22"/>
   <!-- interface-naming-policy project-wide -->
+  <object class="GtkAdjustment" id="adj_fontsize">
+    <property name="lower">5</property>
+    <property name="upper">40</property>
+    <property name="value">10</property>
+    <property name="step_increment">1</property>
+    <property name="page_increment">2</property>
+  </object>
   <object class="GtkListStore" id="listZabbix">
     <columns>
       <!-- column-name triggerid -->
@@ -28,6 +35,8 @@
       <column type="guint"/>
       <!-- column-name vzalias -->
       <column type="gchararray"/>
+      <!-- column-name fontsize -->
+      <column type="gint"/>
     </columns>
   </object>
   <object class="GtkWindow" id="mainWindow">
@@ -70,6 +79,63 @@
                 <property name="position">1</property>
               </packing>
             </child>
+            <child>
+              <object class="GtkHBox" id="hbox2">
+                <property name="visible">True</property>
+                <property name="can_focus">False</property>
+                <child>
+                  <object class="GtkLabel" id="lbl_fontsize">
+                    <property name="visible">True</property>
+                    <property name="can_focus">False</property>
+                    <property name="xalign">0.89999997615814209</property>
+                    <property name="label" translatable="yes">Font Size:</property>
+                  </object>
+                  <packing>
+                    <property name="expand">True</property>
+                    <property name="fill">True</property>
+                    <property name="position">0</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkSpinButton" id="sb_fontsize">
+                    <property name="visible">True</property>
+                    <property name="can_focus">True</property>
+                    <property name="invisible_char">•</property>
+                    <property name="invisible_char_set">True</property>
+                    <property name="primary_icon_activatable">False</property>
+                    <property name="secondary_icon_activatable">False</property>
+                    <property name="primary_icon_sensitive">True</property>
+                    <property name="secondary_icon_sensitive">True</property>
+                    <property name="adjustment">adj_fontsize</property>
+                    <signal name="value-changed" handler="on_sb_fontsize_value_changed" swapped="no"/>
+                  </object>
+                  <packing>
+                    <property name="expand">False</property>
+                    <property name="fill">False</property>
+                    <property name="position">1</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkAlignment" id="alignment2">
+                    <property name="visible">True</property>
+                    <property name="can_focus">False</property>
+                    <child>
+                      <placeholder/>
+                    </child>
+                  </object>
+                  <packing>
+                    <property name="expand">True</property>
+                    <property name="fill">True</property>
+                    <property name="position">2</property>
+                  </packing>
+                </child>
+              </object>
+              <packing>
+                <property name="expand">True</property>
+                <property name="fill">True</property>
+                <property name="position">2</property>
+              </packing>
+            </child>
           </object>
           <packing>
             <property name="expand">False</property>
@@ -90,67 +156,21 @@
                 <property name="can_focus">True</property>
                 <property name="model">listZabbix</property>
                 <property name="search_column">5</property>
+                <property name="enable_grid_lines">both</property>
                 <signal name="button-press-event" handler="on_treeZabbix_button_press_event" swapped="no"/>
                 <child>
-                  <object class="GtkTreeViewColumn" id="vzalias">
+                  <object class="GtkTreeViewColumn" id="ack">
                     <property name="resizable">True</property>
-                    <property name="title" translatable="yes">Zabbix Server</property>
+                    <property name="sizing">autosize</property>
+                    <property name="title" translatable="yes">ACK</property>
                     <property name="clickable">True</property>
                     <property name="reorderable">True</property>
                     <property name="sort_indicator">True</property>
-                    <property name="sort_column_id">11</property>
+                    <property name="sort_column_id">10</property>
                     <child>
-                      <object class="GtkCellRendererText" id="crt_vzalias"/>
+                      <object class="GtkCellRendererToggle" id="crt_ack"/>
                       <attributes>
-                        <attribute name="text">11</attribute>
-                      </attributes>
-                    </child>
-                  </object>
-                </child>
-                <child>
-                  <object class="GtkTreeViewColumn" id="host">
-                    <property name="resizable">True</property>
-                    <property name="title" translatable="yes">Hostname</property>
-                    <property name="clickable">True</property>
-                    <property name="reorderable">True</property>
-                    <property name="sort_indicator">True</property>
-                    <property name="sort_column_id">4</property>
-                    <child>
-                      <object class="GtkCellRendererText" id="crt_host"/>
-                      <attributes>
-                        <attribute name="text">4</attribute>
-                      </attributes>
-                    </child>
-                  </object>
-                </child>
-                <child>
-                  <object class="GtkTreeViewColumn" id="description">
-                    <property name="resizable">True</property>
-                    <property name="title" translatable="yes">Description</property>
-                    <property name="clickable">True</property>
-                    <property name="reorderable">True</property>
-                    <property name="sort_indicator">True</property>
-                    <property name="sort_column_id">5</property>
-                    <child>
-                      <object class="GtkCellRendererText" id="crt_description"/>
-                      <attributes>
-                        <attribute name="text">5</attribute>
-                      </attributes>
-                    </child>
-                  </object>
-                </child>
-                <child>
-                  <object class="GtkTreeViewColumn" id="vlastchange">
-                    <property name="resizable">True</property>
-                    <property name="title" translatable="yes">LastChange</property>
-                    <property name="clickable">True</property>
-                    <property name="reorderable">True</property>
-                    <property name="sort_indicator">True</property>
-                    <property name="sort_column_id">2</property>
-                    <child>
-                      <object class="GtkCellRendererText" id="crt_vlastchange"/>
-                      <attributes>
-                        <attribute name="text">6</attribute>
+                        <attribute name="active">10</attribute>
                       </attributes>
                     </child>
                   </object>
@@ -158,6 +178,7 @@
                 <child>
                   <object class="GtkTreeViewColumn" id="vpriority">
                     <property name="resizable">True</property>
+                    <property name="sizing">autosize</property>
                     <property name="title" translatable="yes">Priority</property>
                     <property name="clickable">True</property>
                     <property name="reorderable">True</property>
@@ -170,22 +191,80 @@
                         <attribute name="background">8</attribute>
                         <attribute name="foreground">9</attribute>
                         <attribute name="markup">7</attribute>
+                        <attribute name="size">12</attribute>
                         <attribute name="text">7</attribute>
                       </attributes>
                     </child>
                   </object>
                 </child>
                 <child>
-                  <object class="GtkTreeViewColumn" id="ack">
-                    <property name="title" translatable="yes">ACK</property>
+                  <object class="GtkTreeViewColumn" id="vzalias">
+                    <property name="resizable">True</property>
+                    <property name="sizing">autosize</property>
+                    <property name="title" translatable="yes">Zabbix Server</property>
                     <property name="clickable">True</property>
                     <property name="reorderable">True</property>
                     <property name="sort_indicator">True</property>
-                    <property name="sort_column_id">10</property>
+                    <property name="sort_column_id">11</property>
                     <child>
-                      <object class="GtkCellRendererToggle" id="crt_ack"/>
+                      <object class="GtkCellRendererText" id="crt_vzalias"/>
                       <attributes>
-                        <attribute name="active">10</attribute>
+                        <attribute name="size">12</attribute>
+                        <attribute name="text">11</attribute>
+                      </attributes>
+                    </child>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkTreeViewColumn" id="host">
+                    <property name="resizable">True</property>
+                    <property name="sizing">autosize</property>
+                    <property name="title" translatable="yes">Hostname</property>
+                    <property name="clickable">True</property>
+                    <property name="reorderable">True</property>
+                    <property name="sort_indicator">True</property>
+                    <property name="sort_column_id">4</property>
+                    <child>
+                      <object class="GtkCellRendererText" id="crt_host"/>
+                      <attributes>
+                        <attribute name="size">12</attribute>
+                        <attribute name="text">4</attribute>
+                      </attributes>
+                    </child>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkTreeViewColumn" id="description">
+                    <property name="resizable">True</property>
+                    <property name="sizing">autosize</property>
+                    <property name="title" translatable="yes">Description</property>
+                    <property name="clickable">True</property>
+                    <property name="reorderable">True</property>
+                    <property name="sort_indicator">True</property>
+                    <property name="sort_column_id">5</property>
+                    <child>
+                      <object class="GtkCellRendererText" id="crt_description"/>
+                      <attributes>
+                        <attribute name="size">12</attribute>
+                        <attribute name="text">5</attribute>
+                      </attributes>
+                    </child>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkTreeViewColumn" id="vlastchange">
+                    <property name="resizable">True</property>
+                    <property name="sizing">autosize</property>
+                    <property name="title" translatable="yes">LastChange</property>
+                    <property name="clickable">True</property>
+                    <property name="reorderable">True</property>
+                    <property name="sort_indicator">True</property>
+                    <property name="sort_column_id">2</property>
+                    <child>
+                      <object class="GtkCellRendererText" id="crt_vlastchange"/>
+                      <attributes>
+                        <attribute name="size">12</attribute>
+                        <attribute name="text">6</attribute>
                       </attributes>
                     </child>
                   </object>
