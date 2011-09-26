@@ -20,6 +20,10 @@ from zbx_connections import zbx_connections
 import notify
 import settingsWindow
 import tooltip
+import subprocess, shlex
+
+
+XSET='/usr/bin/xset'
 
 class GTKZabbix:
     
@@ -81,8 +85,8 @@ class GTKZabbix:
         #gobject.timeout_add(750, self.appind_blink)
         #gobject.timeout_add(750, self.priocolumn_blink)
 
-        #self.window.fullscreen()
         self.isFullscreen = False
+        self.isControlRoomMode = False
         
         self.tooltipWindow = tooltip.tooltip()
         
@@ -144,13 +148,15 @@ class GTKZabbix:
         )
         
         # libNotify
-        if ((time.time() - int(trigger.get('lastchange'))) < 300):
-            notify.notify(trigger.get('priority'), alias + ": " + trigger.get('host'), trigger.get('description'), 10)
+        #if ((time.time() - int(trigger.get('lastchange'))) < 300):
+        #    notify.notify(trigger.get('priority'), alias + ": " + trigger.get('host'), trigger.get('description'), 10)
 
         print "Add {0} - {1} - {2}".format(trigger.get('triggerid'),
             trigger.get('host'), trigger.get('description'))
         
     def add_zbx_triggers(self, triggers):
+        # Get current triggers to compare with new ones in order to know if
+        # they have to be added or if in the other hand they already are in the list
         iter = self.list_zabbix_store.get_iter_first()
         current_triggers = {}
         while iter:
@@ -163,6 +169,8 @@ class GTKZabbix:
             if current_triggers.has_key(int(trigger[1].get('triggerid'))) and \
                 current_triggers[int(trigger[1].get('triggerid'))][1] == trigger[0]:
                     if current_triggers[int(trigger[1].get('triggerid'))][0] < int(trigger[1].get('lastchange')):
+                        # Ensure no black screen if there're active triggers
+                        self.crm_change_display(True)
                         self.append_zbx_trigger(trigger[1], trigger[0])
             else: # Empty ListStore
                 self.append_zbx_trigger(trigger[1], trigger[0])
@@ -182,6 +190,7 @@ class GTKZabbix:
                       self.list_zabbix_store.get_value(iter, 4), self.list_zabbix_store.get_value(iter, 5))
                 deleted = True
                 self.list_zabbix_store.remove(iter)
+                # Better get first iter again than keep on with current altered index
                 iter = self.list_zabbix_store.get_iter_first()
             else:
                 iter = self.list_zabbix_store.iter_next(iter)
@@ -265,9 +274,11 @@ class GTKZabbix:
         self.zbxConnections = zbx_connections(self.conf_threaded)
         self.zbxConnections.init()
         first = True
+        no_triggers_timestamp = None
         while True:
             print "{0} | Updating dashboard".format(datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
             triggers = self.get_zbx_triggers()
+            # Set threads_enter because we are going to change widgets properties on the wild using several threads.
             gtk.gdk.threads_enter()
             try:
                 self.add_zbx_triggers(triggers)
@@ -285,18 +296,33 @@ class GTKZabbix:
                 deleted = self.del_zbx_triggers(triggers)
             except Exception as e:
                 print "GTKZabbixNotify | Exception deleting triggers:\n\t{0}".format(e)
+            
             self.auto_ack(self.conf_threaded.get_setting('ackafterseconds'))
             max_prio = self.get_play_alarm_priority()
             self.lbl_lastupdated_num.set_text(datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
+            # Leaving dangerous section
             gtk.gdk.threads_leave()
             
+            # Play sound if we have delete triggers (and if is it set to do so)
             if deleted and self.conf_threaded.get_setting('sounddelete'):
                 self.play_sound(-1)
                 if max_prio >= 0:
                     time.sleep(0.75)
+
+            # Play Sound
             if max_prio >= 0:
                 self.play_sound(max_prio)
             
+            # Control Room Mode
+            if len(triggers) == 0 and self.isControlRoomMode:
+                if not no_triggers_timestamp:
+                    no_triggers_timestamp = time.time()
+                if time.time() > (no_triggers_timestamp + 300):
+                    self.crm_change_display(False)
+            elif no_triggers_timestamp:
+                no_triggers_timestamp = None
+                self.crm_change_display(True)
+
             if once:
                 break
             # self.notify.notify(4, "Server Name", "Trigger description")
@@ -309,6 +335,9 @@ class GTKZabbix:
         self.show_item = gtk.MenuItem("Show Dashboard")
         self.show_item.connect("activate", self.show)
         self.show_item.show()
+        self.crm_item = gtk.CheckMenuItem("Control Room Mode")
+        self.crm_item.connect("activate", self.control_room_mode)
+        self.crm_item.show()
         self.settings_item = gtk.MenuItem("Settings")
         self.settings_item.connect("activate", self.settings_window)
         self.settings_item.show()
@@ -319,10 +348,14 @@ class GTKZabbix:
         self.quit_item.connect("activate", self.quit)
         self.quit_item.show()
         self.menu.append(self.show_item)
+        self.menu.append(self.crm_item)
         self.menu.append(self.settings_item)
         self.menu.append(self.ackall_item)
         self.menu.append(self.quit_item)
     
+    def control_room_mode(self, widget, data = None):
+        self.isControlRoomMode = not self.isControlRoomMode
+
     def ackall(self, widget, data = None):
         iter = self.list_zabbix_store.get_iter_first()
         while iter:
@@ -419,7 +452,29 @@ class GTKZabbix:
         
     def settings_window(self, widget, data=None):
         settingsWindow.settingsWindow()
-        
+    
+    def crm_change_display(self, on_off):
+        if on_off:
+            self.cmd_execute(XSET + " dpms force on")
+            self.cmd_execute(XSET + " s reset")
+        else:
+            self.cmd_execute(XSET + " dpms force off")
+
+    def cmd_execute(self, command):
+        cmd = shlex.split(command, posix = False)
+        try:
+            p = subprocess.Popen(cmd, stdout = subprocess.PIPE, stderr = subprocess.STDOUT)
+            preturn = p.wait()
+            stdout = ''
+            tmp_stdout = p.stdout.readline()
+            while tmp_stdout:
+                stdout = stdout + tmp_stdout.decode('UTF-8')
+                tmp_stdout = p.stdout.readline()
+            return [stdout, preturn]
+        except Exception as e:
+            print("Exception on execution:\n{0}".format(e))
+            return False
+
 if __name__ == '__main__':
     gtk.gdk.threads_init()
     app = GTKZabbix()
