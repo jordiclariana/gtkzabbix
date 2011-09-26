@@ -42,6 +42,7 @@ class GTKZabbix:
            'on_mainWindow_delete_event': self.hide,
            'on_treeZabbix_button_press_event': self.treeZabbix_click,
            'on_sb_fontsize_value_changed': self.change_fontsize,
+           'on_mainWindow_key_press_event': self.keypress,
         }
 
         self.builder.connect_signals(self.events_dic)
@@ -81,6 +82,7 @@ class GTKZabbix:
         #gobject.timeout_add(750, self.priocolumn_blink)
 
         #self.window.fullscreen()
+        self.isFullscreen = False
         
         self.tooltipWindow = tooltip.tooltip()
         
@@ -89,6 +91,15 @@ class GTKZabbix:
             self.conf_main.close()
             del self.conf_main
             self.window.present()
+
+    def keypress(self, widget, event = None):
+        if event.keyval == gtk.keysyms.F11:
+            if self.isFullscreen:
+                self.window.unfullscreen()
+                self.isFullscreen = False
+            else:
+                self.window.fullscreen()
+                self.isFullscreen = True
 
     def change_fontsize(self, widget, data = None):
         adj_fontsize = self.builder.get_object("adj_fontsize")
