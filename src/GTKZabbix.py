@@ -21,19 +21,19 @@ import notify
 import settingsWindow
 import tooltip
 import subprocess, shlex
-
+import pango
 
 XSET='/usr/bin/xset'
 
 class GTKZabbix:
-    
+
     def __init__(self):
         self.conf_main = configuration.configuration()
-        
+
         filename = resource_path("glade/main.glade").get()
         self.builder = gtk.Builder()
         self.builder.add_from_file(filename)
-        
+
         self.window = self.builder.get_object("mainWindow")
         self.list_zabbix_model = self.builder.get_object("treeZabbix")
         self.list_zabbix_store = self.builder.get_object("listZabbix")
@@ -41,7 +41,7 @@ class GTKZabbix:
         self.lbl_lastupdated_num = self.builder.get_object("lbl_lastupdated_num")
 
         self.window.set_icon_from_file(zbx_priorities().get_icon())
-        
+
         self.events_dic = {
            'on_mainWindow_delete_event': self.hide,
            'on_treeZabbix_button_press_event': self.treeZabbix_click,
@@ -52,7 +52,7 @@ class GTKZabbix:
         self.builder.connect_signals(self.events_dic)
 
         self.list_zabbix_store_ack.connect('toggled', self.ack_toggled_callback, self.list_zabbix_store)
-        
+
         # The indicator!
         self.ind = appindicator.Indicator("Zabbix Notify",
                                           "Zabbix Notify",
@@ -61,23 +61,23 @@ class GTKZabbix:
         self.ind.set_icon(zbx_priorities().get_icon())
         self.menu_setup()
         self.ind.set_menu(self.menu)
-        
+
         # GST Player instance
         self.gstPlayer = gst.element_factory_make("playbin2", "player")
         self.gstPlayer_bus = self.gstPlayer.get_bus()
         self.gstPlayer_bus.add_signal_watch()
         self.gstPlayer_bus.connect("message", self.gstplayer_on_message)
-        
+
         self.list_zabbix_store.clear()
 
         self.update_dashboard_thread = threading.Thread(target=self.update_dashboard)
         self.update_dashboard_thread.setDaemon(True)
         self.update_dashboard_thread.start()
-        
+
         self.appind_blink_thread = threading.Thread(target=self.appind_blink)
         self.appind_blink_thread.setDaemon(True)
         self.appind_blink_thread.start()
-        
+
         self.priocolumn_blink_thread = threading.Thread(target=self.priocolumn_blink)
         self.priocolumn_blink_thread.setDaemon(True)
         self.priocolumn_blink_thread.start()
@@ -87,9 +87,9 @@ class GTKZabbix:
 
         self.isFullscreen = False
         self.isControlRoomMode = False
-        
+
         self.tooltipWindow = tooltip.tooltip()
-        
+
         self.window.maximize()
         if self.conf_main.get_setting('showdashboardinit'):
             self.conf_main.close()
@@ -106,8 +106,20 @@ class GTKZabbix:
                 self.isFullscreen = True
 
     def change_fontsize(self, widget, data = None):
+        column_labels = [ 'lbl_tv_ack',
+                          'lbl_tv_priority',
+                          'lbl_tv_zalias',
+                          'lbl_tv_host',
+                          'lbl_tv_description',
+                          'lbl_tv_lastchange',
+                          'lbl_lastupdated' ]
+
         adj_fontsize = self.builder.get_object("adj_fontsize")
-        
+        for col_label in column_labels:
+            column_label_object = self.builder.get_object(col_label)
+            column_label_object.modify_font(pango.FontDescription(str(adj_fontsize.get_value())))
+        self.lbl_lastupdated_num.modify_font(pango.FontDescription(str(adj_fontsize.get_value())))
+
         iter = self.list_zabbix_store.get_iter_first()
         while iter:
             self.list_zabbix_store.set_value(iter, 12, int(adj_fontsize.get_value())*1000)
@@ -121,7 +133,7 @@ class GTKZabbix:
                 rootwin = widget.get_screen().get_root_window()
                 x, y, mods = rootwin.get_pointer()
                 self.tooltipWindow.show(x, y, '<b>{0}</b>: <i>{1}</i>'.format(model.get_value(selection, 4), model.get_value(selection, 5)))
-                
+
             else:
                 pprint(selection)
             return True
@@ -146,14 +158,14 @@ class GTKZabbix:
             alias,
             int(adj_fontsize.get_value())*1000]
         )
-        
+
         # libNotify
         #if ((time.time() - int(trigger.get('lastchange'))) < 300):
         #    notify.notify(trigger.get('priority'), alias + ": " + trigger.get('host'), trigger.get('description'), 10)
 
         print "Add {0} - {1} - {2}".format(trigger.get('triggerid'),
             trigger.get('host'), trigger.get('description'))
-        
+
     def add_zbx_triggers(self, triggers):
         # Get current triggers to compare with new ones in order to know if
         # they have to be added or if in the other hand they already are in the list
@@ -163,7 +175,7 @@ class GTKZabbix:
             current_triggers[self.list_zabbix_store.get_value(iter, 0)] = \
                 [ self.list_zabbix_store.get_value(iter, 2), self.list_zabbix_store.get_value(iter, 11)]
             iter = self.list_zabbix_store.iter_next(iter)
-        
+
         # Insert
         for trigger in triggers:
             if current_triggers.has_key(int(trigger[1].get('triggerid'))) and \
@@ -174,7 +186,7 @@ class GTKZabbix:
                         self.append_zbx_trigger(trigger[1], trigger[0])
             else: # Empty ListStore
                 self.append_zbx_trigger(trigger[1], trigger[0])
-    
+
     def del_zbx_triggers(self, triggers):
         # Cleanup
         deleted = False
@@ -195,7 +207,7 @@ class GTKZabbix:
             else:
                 iter = self.list_zabbix_store.iter_next(iter)
         return deleted
-    
+
     def get_maxprio_zbx_triggers(self):
         max_prio = -1
         iter = self.list_zabbix_store.get_iter_first()
@@ -206,7 +218,7 @@ class GTKZabbix:
                 max_prio = cur_prio
             iter = self.list_zabbix_store.iter_next(iter)
         return max_prio
-    
+
     def get_play_alarm_priority(self):
         max_prio = -1
         iter = self.list_zabbix_store.get_iter_first()
@@ -220,18 +232,18 @@ class GTKZabbix:
                 max_prio = cur_prio
             iter = self.list_zabbix_store.iter_next(iter)
         return max_prio
-    
+
     def auto_ack(self, seconds):
         if seconds == 0:
             return
-        
+
         cur_time = time.time()
         iter = self.list_zabbix_store.get_iter_first()
         while iter:
             if (cur_time - self.list_zabbix_store.get_value(iter, 2)) > seconds:
                 self.list_zabbix_store.set_value(iter, 10, 1)
             iter = self.list_zabbix_store.iter_next(iter)
-        
+
     def get_zbx_triggers(self):
         triggers = []
         self.zbxConnections.recheck()
@@ -245,16 +257,16 @@ class GTKZabbix:
                      'filter': {'value': 1},
                      'withUnacknowledgedEvents': True}
                     ):
-                    
+
                     triggers_list.append(trigger.get('triggerid'))
-        
+
                 this_trigger = zAPIConn.trigger.get(
                     {'triggerids': triggers_list,
                      'expandDescription': True,
                      'output': 'extend',
                      'expandData': True}
                 )
-                
+
                 if type(this_trigger) is dict:
                     for triggerid in this_trigger.keys():
                         triggers.append([ zAPIAlias, this_trigger[triggerid] ])
@@ -266,9 +278,9 @@ class GTKZabbix:
 
             except Exception as e:
                 print "GTKZabbix | Unexpected error getting triggers from {0}:\n\t{1}".format(zAPIAlias, e)
-             
+
         return triggers
-    
+
     def update_dashboard(self, once = False):
         self.conf_threaded = configuration.configuration()
         self.zbxConnections = zbx_connections(self.conf_threaded)
@@ -296,13 +308,13 @@ class GTKZabbix:
                 deleted = self.del_zbx_triggers(triggers)
             except Exception as e:
                 print "GTKZabbixNotify | Exception deleting triggers:\n\t{0}".format(e)
-            
+
             self.auto_ack(self.conf_threaded.get_setting('ackafterseconds'))
             max_prio = self.get_play_alarm_priority()
             self.lbl_lastupdated_num.set_text(datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
             # Leaving dangerous section
             gtk.gdk.threads_leave()
-            
+
             # Play sound if we have delete triggers (and if is it set to do so)
             if deleted and self.conf_threaded.get_setting('sounddelete'):
                 self.play_sound(-1)
@@ -312,7 +324,7 @@ class GTKZabbix:
             # Play Sound
             if max_prio >= 0:
                 self.play_sound(max_prio)
-            
+
             # Control Room Mode
             if len(triggers) == 0 and self.isControlRoomMode:
                 if not no_triggers_timestamp:
@@ -328,7 +340,7 @@ class GTKZabbix:
             # self.notify.notify(4, "Server Name", "Trigger description")
             time.sleep(self.conf_threaded.get_setting('checkinterval'))
         self.conf_threaded.close()
-        
+
     def menu_setup(self):
         self.menu = gtk.Menu()
 
@@ -352,7 +364,7 @@ class GTKZabbix:
         self.menu.append(self.settings_item)
         self.menu.append(self.ackall_item)
         self.menu.append(self.quit_item)
-    
+
     def control_room_mode(self, widget, data = None):
         self.isControlRoomMode = not self.isControlRoomMode
 
@@ -361,20 +373,20 @@ class GTKZabbix:
         while iter:
             self.list_zabbix_store.set_value(iter, 10, 1)
             iter = self.list_zabbix_store.iter_next(iter)
-        
+
     def ack_toggled_callback(self, cell, path, model=None):
         iter = model.get_iter(path)
-        model.set_value(iter, 10, not cell.get_active())        
-    
+        model.set_value(iter, 10, not cell.get_active())
+
     def show(self, widget, data=None):
         self.window.present()
         return True
-    
+
     def hide(self, widget, data=None):
         self.tooltipWindow.hide()
         self.window.hide()
         return True
-            
+
     def quit(self, widget, data=None):
         print "Quit!"
         gtk.main_quit()
@@ -385,7 +397,7 @@ class GTKZabbix:
             gtk.gdk.threads_enter()
             if not hasattr(self, 'blinkFlag'):
                 self.blinkFlag = True
-            
+
             iter = self.list_zabbix_store.get_iter_first()
             while iter:
                 counter = 0
@@ -405,36 +417,36 @@ class GTKZabbix:
                     self.window.set_icon_from_file(zbx_priorities().get_icon())
             gtk.gdk.threads_leave()
             time.sleep(0.75)
-    
+
     def priocolumn_blink(self):
         while True:
             gtk.gdk.threads_enter()
             if not hasattr(self, 'blinkFlag'):
                 self.blinkFlag = True
-                
+
             iter = self.list_zabbix_store.get_iter_first()
             while iter:
                 if self.list_zabbix_store.get_value(iter, 10) == 1: # Is ACKed?
                     if self.list_zabbix_store.get_value(iter, 8) == zbx_priorities(self.list_zabbix_store.get_value(iter, 3)).get_not_color(0):
-                        self.list_zabbix_store.set_value(iter, 8, 
+                        self.list_zabbix_store.set_value(iter, 8,
                              zbx_priorities(self.list_zabbix_store.get_value(iter, 3)).get_color(0))
                         self.list_zabbix_store.set_value(iter, 9,
                              zbx_priorities(self.list_zabbix_store.get_value(iter, 3)).get_color(1))
                 else: # If not blink
                     if self.blinkFlag:
-                        self.list_zabbix_store.set_value(iter, 8, 
+                        self.list_zabbix_store.set_value(iter, 8,
                              zbx_priorities(self.list_zabbix_store.get_value(iter, 3)).get_color(0))
                         self.list_zabbix_store.set_value(iter, 9,
                              zbx_priorities(self.list_zabbix_store.get_value(iter, 3)).get_color(1))
                     else:
-                        self.list_zabbix_store.set_value(iter, 8, 
+                        self.list_zabbix_store.set_value(iter, 8,
                              zbx_priorities(self.list_zabbix_store.get_value(iter, 3)).get_not_color(0))
                         self.list_zabbix_store.set_value(iter, 9,
                              zbx_priorities(self.list_zabbix_store.get_value(iter, 3)).get_not_color(1))
-    
+
                 iter=self.list_zabbix_store.iter_next(iter)
             gtk.gdk.threads_leave()
-            self.blinkFlag = not self.blinkFlag 
+            self.blinkFlag = not self.blinkFlag
             time.sleep(0.75)
 
     def play_sound(self, priority):
@@ -442,17 +454,17 @@ class GTKZabbix:
             uri = 'file://' + zbx_priorities(priority).get_sound()
             self.gstPlayer.set_property('uri', uri)
             self.gstPlayer.set_state(gst.STATE_PLAYING)
-    
+
     def gstplayer_on_message(self, bus, message):
         t = message.type
         if t == gst.MESSAGE_EOS:
             self.gstPlayer.set_state(gst.STATE_NULL)
         if t == gst.MESSAGE_ERROR:
             self.gstPlayer.set_state(gst.STATE_NULL)
-        
+
     def settings_window(self, widget, data=None):
         settingsWindow.settingsWindow()
-    
+
     def crm_change_display(self, on_off):
         if on_off:
             self.cmd_execute(XSET + " dpms force on")

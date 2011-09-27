@@ -9,6 +9,36 @@
     <property name="step_increment">1</property>
     <property name="page_increment">2</property>
   </object>
+  <object class="GtkLabel" id="lbl_tv_ack">
+    <property name="visible">True</property>
+    <property name="can_focus">False</property>
+    <property name="label" translatable="yes">ACK</property>
+  </object>
+  <object class="GtkLabel" id="lbl_tv_description">
+    <property name="visible">True</property>
+    <property name="can_focus">False</property>
+    <property name="label" translatable="yes">Description</property>
+  </object>
+  <object class="GtkLabel" id="lbl_tv_host">
+    <property name="visible">True</property>
+    <property name="can_focus">False</property>
+    <property name="label" translatable="yes">Hostname</property>
+  </object>
+  <object class="GtkLabel" id="lbl_tv_lastchange">
+    <property name="visible">True</property>
+    <property name="can_focus">False</property>
+    <property name="label" translatable="yes">Last Change</property>
+  </object>
+  <object class="GtkLabel" id="lbl_tv_priority">
+    <property name="visible">True</property>
+    <property name="can_focus">False</property>
+    <property name="label" translatable="yes">Priority</property>
+  </object>
+  <object class="GtkLabel" id="lbl_tv_zalias">
+    <property name="visible">True</property>
+    <property name="can_focus">False</property>
+    <property name="label" translatable="yes">Zabbix Server</property>
+  </object>
   <object class="GtkListStore" id="listZabbix">
     <columns>
       <!-- column-name triggerid -->
@@ -166,6 +196,7 @@
                     <property name="sizing">autosize</property>
                     <property name="title" translatable="yes">ACK</property>
                     <property name="clickable">True</property>
+                    <property name="widget">lbl_tv_ack</property>
                     <property name="reorderable">True</property>
                     <property name="sort_indicator">True</property>
                     <property name="sort_column_id">10</property>
@@ -186,6 +217,7 @@
                     <property name="sizing">autosize</property>
                     <property name="title" translatable="yes">Priority</property>
                     <property name="clickable">True</property>
+                    <property name="widget">lbl_tv_priority</property>
                     <property name="reorderable">True</property>
                     <property name="sort_indicator">True</property>
                     <property name="sort_column_id">3</property>
@@ -209,6 +241,7 @@
                     <property name="sizing">autosize</property>
                     <property name="title" translatable="yes">Zabbix Server</property>
                     <property name="clickable">True</property>
+                    <property name="widget">lbl_tv_zalias</property>
                     <property name="reorderable">True</property>
                     <property name="sort_indicator">True</property>
                     <property name="sort_column_id">11</property>
@@ -230,6 +263,7 @@
                     <property name="sizing">autosize</property>
                     <property name="title" translatable="yes">Hostname</property>
                     <property name="clickable">True</property>
+                    <property name="widget">lbl_tv_host</property>
                     <property name="reorderable">True</property>
                     <property name="sort_indicator">True</property>
                     <property name="sort_column_id">4</property>
@@ -249,6 +283,7 @@
                     <property name="sizing">autosize</property>
                     <property name="title" translatable="yes">Description</property>
                     <property name="clickable">True</property>
+                    <property name="widget">lbl_tv_description</property>
                     <property name="reorderable">True</property>
                     <property name="sort_indicator">True</property>
                     <property name="sort_column_id">5</property>
@@ -268,8 +303,9 @@
                     <property name="resizable">True</property>
                     <property name="spacing">10</property>
                     <property name="sizing">autosize</property>
-                    <property name="title" translatable="yes">LastChange</property>
+                    <property name="title" translatable="yes">Last Change</property>
                     <property name="clickable">True</property>
+                    <property name="widget">lbl_tv_lastchange</property>
                     <property name="reorderable">True</property>
                     <property name="sort_indicator">True</property>
                     <property name="sort_column_id">2</property>
