@@ -44,8 +44,8 @@
     <property name="height_request">400</property>
     <property name="can_focus">False</property>
     <property name="title" translatable="yes">GTKZabbix</property>
+    <signal name="key-press-event" handler="on_mainWindow_key_press_event" swapped="no"/>
     <signal name="delete-event" handler="on_mainWindow_delete_event" swapped="no"/>
-    <signal name="key_press_event" handler="on_mainWindow_key_press_event"/>
     <child>
       <object class="GtkVBox" id="vbox1">
         <property name="visible">True</property>
@@ -162,6 +162,7 @@
                 <child>
                   <object class="GtkTreeViewColumn" id="ack">
                     <property name="resizable">True</property>
+                    <property name="spacing">10</property>
                     <property name="sizing">autosize</property>
                     <property name="title" translatable="yes">ACK</property>
                     <property name="clickable">True</property>
@@ -169,7 +170,9 @@
                     <property name="sort_indicator">True</property>
                     <property name="sort_column_id">10</property>
                     <child>
-                      <object class="GtkCellRendererToggle" id="crt_ack"/>
+                      <object class="GtkCellRendererToggle" id="crt_ack">
+                        <property name="cell_background">#d3d3d3</property>
+                      </object>
                       <attributes>
                         <attribute name="active">10</attribute>
                       </attributes>
@@ -179,6 +182,7 @@
                 <child>
                   <object class="GtkTreeViewColumn" id="vpriority">
                     <property name="resizable">True</property>
+                    <property name="spacing">10</property>
                     <property name="sizing">autosize</property>
                     <property name="title" translatable="yes">Priority</property>
                     <property name="clickable">True</property>
@@ -201,6 +205,7 @@
                 <child>
                   <object class="GtkTreeViewColumn" id="vzalias">
                     <property name="resizable">True</property>
+                    <property name="spacing">10</property>
                     <property name="sizing">autosize</property>
                     <property name="title" translatable="yes">Zabbix Server</property>
                     <property name="clickable">True</property>
@@ -208,7 +213,9 @@
                     <property name="sort_indicator">True</property>
                     <property name="sort_column_id">11</property>
                     <child>
-                      <object class="GtkCellRendererText" id="crt_vzalias"/>
+                      <object class="GtkCellRendererText" id="crt_vzalias">
+                        <property name="cell_background">#d3d3d3</property>
+                      </object>
                       <attributes>
                         <attribute name="size">12</attribute>
                         <attribute name="text">11</attribute>
@@ -219,6 +226,7 @@
                 <child>
                   <object class="GtkTreeViewColumn" id="host">
                     <property name="resizable">True</property>
+                    <property name="spacing">10</property>
                     <property name="sizing">autosize</property>
                     <property name="title" translatable="yes">Hostname</property>
                     <property name="clickable">True</property>
@@ -237,6 +245,7 @@
                 <child>
                   <object class="GtkTreeViewColumn" id="description">
                     <property name="resizable">True</property>
+                    <property name="spacing">10</property>
                     <property name="sizing">autosize</property>
                     <property name="title" translatable="yes">Description</property>
                     <property name="clickable">True</property>
@@ -244,7 +253,9 @@
                     <property name="sort_indicator">True</property>
                     <property name="sort_column_id">5</property>
                     <child>
-                      <object class="GtkCellRendererText" id="crt_description"/>
+                      <object class="GtkCellRendererText" id="crt_description">
+                        <property name="cell_background">#d3d3d3</property>
+                      </object>
                       <attributes>
                         <attribute name="size">12</attribute>
                         <attribute name="text">5</attribute>
@@ -255,6 +266,7 @@
                 <child>
                   <object class="GtkTreeViewColumn" id="vlastchange">
                     <property name="resizable">True</property>
+                    <property name="spacing">10</property>
                     <property name="sizing">autosize</property>
                     <property name="title" translatable="yes">LastChange</property>
                     <property name="clickable">True</property>
