@@ -1,36 +1,76 @@
-'''
-Created on 25/07/2011
+#   GTK dashboard for Zabbix server.
+#   Copyright (C) 2011  Jordi Clariana jordiclariana(at)gmail(dot)com
+#   This file is part of GTKZabbix.
+#
+#   GTKZabbix is free software: you can redistribute it and/or modify
+#   it under the terms of the GNU General Public License as published by
+#   the Free Software Foundation, either version 3 of the License, or
+#   (at your option) any later version.
+#
+#   GTKZabbix is distributed in the hope that it will be useful,
+#   but WITHOUT ANY WARRANTY; without even the implied warranty of
+#   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#   GNU General Public License for more details.
+#
+#   You should have received a copy of the GNU General Public License
+#   along with GTKZabbix.  If not, see <http://www.gnu.org/licenses/>.
 
-@author: Jordi Clariana
-'''
-import sys, os
-import gtk, gobject
-import zbx_connections
-import appindicator
-from zabbix_api import ZabbixAPI, ZabbixAPIException
-from pprint import pprint
-import datetime
-import gst
-import threading
-import time
-import configuration
-from zbx_priorities import zbx_priorities
-from resource_path import resource_path
-from zbx_connections import zbx_connections
-import notify
-import settingsWindow
-import tooltip
-import subprocess, shlex
-import pango
+# System modules
+try:
+    import sys
+    import os
+    import datetime
+    import threading
+    import time
+    import subprocess
+    import shlex
+except Exception as e:
+    print ("Error loading system modules: {0}".format(e))
+    sys.exit(1)
+
+# GTK modules
+try:
+    import gtk
+    import gobject
+    import appindicator
+    import pango
+except Exception as e:
+    print ("Error loading GTK modules: {0}".format(e))
+    sys.exit(1)
+
+# Audio modules
+try:
+    import gst
+except Exception as e:
+    print ("Error loading audio modules: {0}".format(e))
+    sys.exit(1)
+
+# Custom modules
+try:
+    from libs.configuration import configuration
+    from libs.zabbix_api import ZabbixAPI, ZabbixAPIException
+    from libs.zabbix import zbx_connections, zbx_priorities, zbx_connections, resource_path
+    from settingsWindow import settingsWindow
+    #import notify
+except Exception as e:
+    print ("Error loading custom modules: {0}".format(e))
+    sys.exit(1)
+
+# Debugging
+try:
+    from pprint import pprint
+except Exception as e:
+    print ("Error loading debugging modules: {0}".format(e))
+    sys.exit(1)
 
 XSET='/usr/bin/xset'
 
 class GTKZabbix:
 
     def __init__(self):
-        self.conf_main = configuration.configuration()
+        self.conf_main = configuration()
 
-        filename = resource_path("glade/main.glade").get()
+        filename = resource_path("resources/glade/main.glade").get()
         self.builder = gtk.Builder()
         self.builder.add_from_file(filename)
 
@@ -44,8 +84,8 @@ class GTKZabbix:
 
         self.events_dic = {
            'on_mainWindow_delete_event': self.hide,
-           'on_treeZabbix_button_press_event': self.treeZabbix_click,
            'on_sb_fontsize_value_changed': self.change_fontsize,
+           'on_sc_fontsize_value_changed': self.change_fontsize,
            'on_mainWindow_key_press_event': self.keypress,
         }
 
@@ -88,8 +128,6 @@ class GTKZabbix:
         self.isFullscreen = False
         self.isControlRoomMode = False
 
-        self.tooltipWindow = tooltip.tooltip()
-
         self.window.maximize()
         if self.conf_main.get_setting('showdashboardinit'):
             self.conf_main.close()
@@ -125,22 +163,6 @@ class GTKZabbix:
             self.list_zabbix_store.set_value(iter, 12, int(adj_fontsize.get_value())*1000)
             iter = self.list_zabbix_store.iter_next(iter)
 
-    def treeZabbix_click(self, widget, event):
-        if event.button == 1 and event.type == gtk.gdk._2BUTTON_PRESS:
-            myselection = widget.get_selection()
-            model, selection = myselection.get_selected()
-            if isinstance(selection, gtk.TreeIter):
-                rootwin = widget.get_screen().get_root_window()
-                x, y, mods = rootwin.get_pointer()
-                self.tooltipWindow.show(x, y, '<b>{0}</b>: <i>{1}</i>'.format(model.get_value(selection, 4), model.get_value(selection, 5)))
-
-            else:
-                pprint(selection)
-            return True
-        elif event.button == 1 and event.type == gtk.gdk.BUTTON_PRESS:
-            self.tooltipWindow.hide()
-            return False
-
     def append_zbx_trigger(self, trigger, alias):
         adj_fontsize = self.builder.get_object("adj_fontsize")
         self.list_zabbix_store.append([
@@ -163,8 +185,8 @@ class GTKZabbix:
         #if ((time.time() - int(trigger.get('lastchange'))) < 300):
         #    notify.notify(trigger.get('priority'), alias + ": " + trigger.get('host'), trigger.get('description'), 10)
 
-        print "Add {0} - {1} - {2}".format(trigger.get('triggerid'),
-            trigger.get('host'), trigger.get('description'))
+        print ("Add {0} - {1} - {2}".format(trigger.get('triggerid'),
+            trigger.get('host'), trigger.get('description')))
 
     def add_zbx_triggers(self, triggers):
         # Get current triggers to compare with new ones in order to know if
@@ -198,8 +220,8 @@ class GTKZabbix:
                  self.list_zabbix_store.get_value(iter, 11) == trigger[0]:
                     delete_flag = False
             if delete_flag:
-                print "Delete {0} - {1} - {2}".format(self.list_zabbix_store.get_value(iter, 0),
-                      self.list_zabbix_store.get_value(iter, 4), self.list_zabbix_store.get_value(iter, 5))
+                print ("Delete {0} - {1} - {2}".format(self.list_zabbix_store.get_value(iter, 0),
+                      self.list_zabbix_store.get_value(iter, 4), self.list_zabbix_store.get_value(iter, 5)))
                 deleted = True
                 self.list_zabbix_store.remove(iter)
                 # Better get first iter again than keep on with current altered index
@@ -274,28 +296,28 @@ class GTKZabbix:
                     for trigger in this_trigger:
                         triggers.append([ zAPIAlias, trigger ])
                 else:
-                    print "Error parsing triggers. Not dict and not list. Is: {0}".format(type(this_trigger))
+                    print ("Error parsing triggers. Not dict and not list. Is: {0}".format(type(this_trigger)))
 
             except Exception as e:
-                print "GTKZabbix | Unexpected error getting triggers from {0}:\n\t{1}".format(zAPIAlias, e)
+                print ("GTKZabbix | Unexpected error getting triggers from {0}:\n\t{1}".format(zAPIAlias, e))
 
         return triggers
 
     def update_dashboard(self, once = False):
-        self.conf_threaded = configuration.configuration()
+        self.conf_threaded = configuration()
         self.zbxConnections = zbx_connections(self.conf_threaded)
         self.zbxConnections.init()
         first = True
         no_triggers_timestamp = None
         while True:
-            print "{0} | Updating dashboard".format(datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
+            print ("{0} | Updating dashboard".format(datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')))
             triggers = self.get_zbx_triggers()
             # Set threads_enter because we are going to change widgets properties on the wild using several threads.
             gtk.gdk.threads_enter()
             try:
                 self.add_zbx_triggers(triggers)
             except Exception as e:
-                print "GTKZabbixNotify | Exception adding triggers:\n\t{0}".format(e)
+                print ("GTKZabbixNotify | Exception adding triggers:\n\t{0}".format(e))
             if first:
                 first = False
                 self.list_zabbix_store.set_sort_column_id(2, gtk.SORT_DESCENDING)
@@ -303,11 +325,11 @@ class GTKZabbix:
                     try:
                         self.ackall(None)
                     except Exception as e:
-                        print "GTKZabbixNotify | Exception ACKing triggers:\n\t{0}".format(e)
+                        print ("GTKZabbixNotify | Exception ACKing triggers:\n\t{0}".format(e))
             try:
                 deleted = self.del_zbx_triggers(triggers)
             except Exception as e:
-                print "GTKZabbixNotify | Exception deleting triggers:\n\t{0}".format(e)
+                print ("GTKZabbixNotify | Exception deleting triggers:\n\t{0}".format(e))
 
             self.auto_ack(self.conf_threaded.get_setting('ackafterseconds'))
             max_prio = self.get_play_alarm_priority()
@@ -383,12 +405,11 @@ class GTKZabbix:
         return True
 
     def hide(self, widget, data=None):
-        self.tooltipWindow.hide()
         self.window.hide()
         return True
 
     def quit(self, widget, data=None):
-        print "Quit!"
+        print ("Quit!")
         gtk.main_quit()
 
     def appind_blink(self):
@@ -463,7 +484,7 @@ class GTKZabbix:
             self.gstPlayer.set_state(gst.STATE_NULL)
 
     def settings_window(self, widget, data=None):
-        settingsWindow.settingsWindow()
+        settingsWindow()
 
     def crm_change_display(self, on_off):
         if on_off:
@@ -484,8 +505,10 @@ class GTKZabbix:
                 tmp_stdout = p.stdout.readline()
             return [stdout, preturn]
         except Exception as e:
-            print("Exception on execution:\n{0}".format(e))
+            print ("Exception on execution:\n{0}".format(e))
             return False
+
+
 
 if __name__ == '__main__':
     gtk.gdk.threads_init()
