@@ -65,6 +65,22 @@ except Exception as e:
 
 XSET='/usr/bin/xset'
 
+LISTZABBIX = {
+    'triggerid': 0,
+    'hostid': 1,
+    'lastchange': 2,
+    'priority': 3,
+    'host': 4,
+    'description': 5,
+    'vlastchange': 6,
+    'vpriority': 7,
+    'priobackgroundcolor': 8,
+    'prioforegroundcolor': 9,
+    'ack': 10,
+    'vzalias': 11,
+    'fontsize': 12
+}
+
 class GTKZabbix:
 
     def __init__(self):
@@ -160,7 +176,7 @@ class GTKZabbix:
 
         iter = self.list_zabbix_store.get_iter_first()
         while iter:
-            self.list_zabbix_store.set_value(iter, 12, int(adj_fontsize.get_value())*1000)
+            self.list_zabbix_store.set_value(iter, LISTZABBIX['fontsize'], int(adj_fontsize.get_value())*1000)
             iter = self.list_zabbix_store.iter_next(iter)
 
     def append_zbx_trigger(self, trigger, alias):
@@ -188,26 +204,36 @@ class GTKZabbix:
         print ("Add {0} - {1} - {2}".format(trigger.get('triggerid'),
             trigger.get('host'), trigger.get('description')))
 
+
     def add_zbx_triggers(self, triggers):
         # Get current triggers to compare with new ones in order to know if
         # they have to be added or if in the other hand they already are in the list
         iter = self.list_zabbix_store.get_iter_first()
-        current_triggers = {}
-        while iter:
-            current_triggers[self.list_zabbix_store.get_value(iter, 0)] = \
-                [ self.list_zabbix_store.get_value(iter, 2), self.list_zabbix_store.get_value(iter, 11)]
-            iter = self.list_zabbix_store.iter_next(iter)
+        
+        if not iter and len(triggers)>0: # List is empty, adding all items
+            for trigger in triggers:
+                self.append_zbx_trigger(trigger[1], trigger[0])
+        else:
+            for trigger in triggers:
+                found = False
+                while iter:
+                    if self.list_zabbix_store.get_value(iter, LISTZABBIX['triggerid']) == int(trigger[1].get('triggerid')) and \
+                        self.list_zabbix_store.get_value(iter, LISTZABBIX['vzalias']) == trigger[0]:
+                        # Item already exist on the list
+                        found = True
+                        if self.list_zabbix_store.get_value(iter, LISTZABBIX['lastchange']) < int(trigger[1].get('lastchange')):
+                            # Update lastchange of this trigger
+                            self.list_zabbix_store.set_value(iter, LISTZABBIX['lastchange'], int(trigger[1].get('lastchange')))
+                        iter = self.list_zabbix_store.get_iter_first()
+                        break
+                    iter = self.list_zabbix_store.iter_next(iter)
 
-        # Insert
-        for trigger in triggers:
-            if current_triggers.has_key(int(trigger[1].get('triggerid'))) and \
-                current_triggers[int(trigger[1].get('triggerid'))][1] == trigger[0]:
-                    if current_triggers[int(trigger[1].get('triggerid'))][0] < int(trigger[1].get('lastchange')):
-                        # Ensure no black screen if there're active triggers
+                if not found:
+                        # No item found, add it
                         self.crm_change_display(True)
                         self.append_zbx_trigger(trigger[1], trigger[0])
-            else: # Empty ListStore
-                self.append_zbx_trigger(trigger[1], trigger[0])
+                        # Start over again
+                        iter = self.list_zabbix_store.get_iter_first()
 
     def del_zbx_triggers(self, triggers):
         # Cleanup
@@ -216,12 +242,12 @@ class GTKZabbix:
         while iter:
             delete_flag = True
             for trigger in triggers:
-                if int(self.list_zabbix_store.get_value(iter, 0)) == int(trigger[1].get('triggerid')) and \
-                 self.list_zabbix_store.get_value(iter, 11) == trigger[0]:
+                if int(self.list_zabbix_store.get_value(iter, LISTZABBIX['triggerid'])) == int(trigger[1].get('triggerid')) and \
+                 self.list_zabbix_store.get_value(iter, LISTZABBIX['vzalias']) == trigger[0]:
                     delete_flag = False
             if delete_flag:
-                print ("Delete {0} - {1} - {2}".format(self.list_zabbix_store.get_value(iter, 0),
-                      self.list_zabbix_store.get_value(iter, 4), self.list_zabbix_store.get_value(iter, 5)))
+                print ("Delete {0} - {1} - {2}".format(self.list_zabbix_store.get_value(iter, LISTZABBIX['triggerid']),
+                      self.list_zabbix_store.get_value(iter, LISTZABBIX['host']), self.list_zabbix_store.get_value(iter, LISTZABBIX['description'])))
                 deleted = True
                 self.list_zabbix_store.remove(iter)
                 # Better get first iter again than keep on with current altered index
@@ -234,8 +260,8 @@ class GTKZabbix:
         max_prio = -1
         iter = self.list_zabbix_store.get_iter_first()
         while iter:
-            cur_prio = int(self.list_zabbix_store.get_value(iter, 3))
-            cur_isack = int(self.list_zabbix_store.get_value(iter, 10))
+            cur_prio = int(self.list_zabbix_store.get_value(iter, LISTZABBIX['priority']))
+            cur_isack = int(self.list_zabbix_store.get_value(iter, LISTZABBIX['ack']))
             if cur_prio > max_prio and cur_isack == 0:
                 max_prio = cur_prio
             iter = self.list_zabbix_store.iter_next(iter)
@@ -245,9 +271,9 @@ class GTKZabbix:
         max_prio = -1
         iter = self.list_zabbix_store.get_iter_first()
         while iter:
-            cur_prio = int(self.list_zabbix_store.get_value(iter, 3))
-            cur_isack = bool(self.list_zabbix_store.get_value(iter, 10))
-            cur_timestamps = int(self.list_zabbix_store.get_value(iter, 2))
+            cur_prio = int(self.list_zabbix_store.get_value(iter, LISTZABBIX['priority']))
+            cur_isack = bool(self.list_zabbix_store.get_value(iter, LISTZABBIX['ack']))
+            cur_timestamps = int(self.list_zabbix_store.get_value(iter, LISTZABBIX['lastchange']))
             diff_time = (time.time() - cur_timestamps)
             if diff_time <= self.conf_threaded.get_setting('playsoundiftriggerlastchange') and cur_prio > max_prio \
                 and cur_isack == False and cur_prio >= self.conf_threaded.get_setting('playifprio'):
@@ -262,8 +288,8 @@ class GTKZabbix:
         cur_time = time.time()
         iter = self.list_zabbix_store.get_iter_first()
         while iter:
-            if (cur_time - self.list_zabbix_store.get_value(iter, 2)) > seconds:
-                self.list_zabbix_store.set_value(iter, 10, 1)
+            if (cur_time - self.list_zabbix_store.get_value(iter, LISTZABBIX['lastchange'])) > seconds:
+                self.list_zabbix_store.set_value(iter, LISTZABBIX['ack'], 1)
             iter = self.list_zabbix_store.iter_next(iter)
 
     def get_zbx_triggers(self):
@@ -315,6 +341,7 @@ class GTKZabbix:
             # Set threads_enter because we are going to change widgets properties on the wild using several threads.
             gtk.gdk.threads_enter()
             try:
+                print "Triggers found: {0}".format(len(triggers))
                 self.add_zbx_triggers(triggers)
             except Exception as e:
                 print ("GTKZabbixNotify | Exception adding triggers:\n\t{0}".format(e))
@@ -393,12 +420,12 @@ class GTKZabbix:
     def ackall(self, widget, data = None):
         iter = self.list_zabbix_store.get_iter_first()
         while iter:
-            self.list_zabbix_store.set_value(iter, 10, 1)
+            self.list_zabbix_store.set_value(iter, LISTZABBIX['ack'], 1)
             iter = self.list_zabbix_store.iter_next(iter)
 
     def ack_toggled_callback(self, cell, path, model=None):
         iter = model.get_iter(path)
-        model.set_value(iter, 10, not cell.get_active())
+        model.set_value(iter, LISTZABBIX['ack'], not cell.get_active())
 
     def show(self, widget, data=None):
         self.window.present()
@@ -422,7 +449,7 @@ class GTKZabbix:
             iter = self.list_zabbix_store.get_iter_first()
             while iter:
                 counter = 0
-                if self.list_zabbix_store.get_value(iter, 10) == 0:
+                if self.list_zabbix_store.get_value(iter, LISTZABBIX['ack']) == 0:
                     if self.blinkFlag:
                         self.ind.set_icon(zbx_priorities(self.get_maxprio_zbx_triggers()).get_icon())
                         self.window.set_icon_from_file(zbx_priorities(self.get_maxprio_zbx_triggers()).get_icon())
@@ -447,23 +474,23 @@ class GTKZabbix:
 
             iter = self.list_zabbix_store.get_iter_first()
             while iter:
-                if self.list_zabbix_store.get_value(iter, 10) == 1: # Is ACKed?
-                    if self.list_zabbix_store.get_value(iter, 8) == zbx_priorities(self.list_zabbix_store.get_value(iter, 3)).get_not_color(0):
-                        self.list_zabbix_store.set_value(iter, 8,
-                             zbx_priorities(self.list_zabbix_store.get_value(iter, 3)).get_color(0))
-                        self.list_zabbix_store.set_value(iter, 9,
-                             zbx_priorities(self.list_zabbix_store.get_value(iter, 3)).get_color(1))
+                if self.list_zabbix_store.get_value(iter, LISTZABBIX['ack']) == 1: # Is ACKed?
+                    if self.list_zabbix_store.get_value(iter, LISTZABBIX['priobackgroundcolor']) == zbx_priorities(self.list_zabbix_store.get_value(iter, LISTZABBIX['priority'])).get_not_color(0):
+                        self.list_zabbix_store.set_value(iter, LISTZABBIX['priobackgroundcolor'],
+                             zbx_priorities(self.list_zabbix_store.get_value(iter, LISTZABBIX['priority'])).get_color(0))
+                        self.list_zabbix_store.set_value(iter, LISTZABBIX['prioforegroundcolor'],
+                             zbx_priorities(self.list_zabbix_store.get_value(iter, LISTZABBIX['priority'])).get_color(1))
                 else: # If not blink
                     if self.blinkFlag:
-                        self.list_zabbix_store.set_value(iter, 8,
-                             zbx_priorities(self.list_zabbix_store.get_value(iter, 3)).get_color(0))
-                        self.list_zabbix_store.set_value(iter, 9,
-                             zbx_priorities(self.list_zabbix_store.get_value(iter, 3)).get_color(1))
+                        self.list_zabbix_store.set_value(iter, LISTZABBIX['priobackgroundcolor'],
+                             zbx_priorities(self.list_zabbix_store.get_value(iter, LISTZABBIX['priority'])).get_color(0))
+                        self.list_zabbix_store.set_value(iter, LISTZABBIX['prioforegroundcolor'],
+                             zbx_priorities(self.list_zabbix_store.get_value(iter, LISTZABBIX['priority'])).get_color(1))
                     else:
-                        self.list_zabbix_store.set_value(iter, 8,
-                             zbx_priorities(self.list_zabbix_store.get_value(iter, 3)).get_not_color(0))
-                        self.list_zabbix_store.set_value(iter, 9,
-                             zbx_priorities(self.list_zabbix_store.get_value(iter, 3)).get_not_color(1))
+                        self.list_zabbix_store.set_value(iter, LISTZABBIX['priobackgroundcolor'],
+                             zbx_priorities(self.list_zabbix_store.get_value(iter, LISTZABBIX['priority'])).get_not_color(0))
+                        self.list_zabbix_store.set_value(iter, LISTZABBIX['prioforegroundcolor'],
+                             zbx_priorities(self.list_zabbix_store.get_value(iter, LISTZABBIX['priority'])).get_not_color(1))
 
                 iter=self.list_zabbix_store.iter_next(iter)
             gtk.gdk.threads_leave()
