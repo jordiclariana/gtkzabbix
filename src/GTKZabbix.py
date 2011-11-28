@@ -341,7 +341,6 @@ class GTKZabbix:
             # Set threads_enter because we are going to change widgets properties on the wild using several threads.
             gtk.gdk.threads_enter()
             try:
-                print "Triggers found: {0}".format(len(triggers))
                 self.add_zbx_triggers(triggers)
             except Exception as e:
                 print ("GTKZabbixNotify | Exception adding triggers:\n\t{0}".format(e))
