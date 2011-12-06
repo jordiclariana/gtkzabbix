@@ -42,7 +42,7 @@ class zbx_priorities:
     __priorities = [ 'Not classified', 'Informational', 'Warning', 'Average' ,'High', 'Disaster' ]
     __priorities_color_bg = [ '#00FF00', '#00FF00', '#FFFF00', '#FF8C00', '#FF0000', '#D02090' ]
     __priorities_color_fg = [ '#000000', '#000000', '#000000', '#000000', '#FFFFFF', '#FFFFFF' ]
-    __priorities_not_color_fg = [ '#DDAAAA', '#DDAAAA', '#DDAAAA', '#DDAAAA', '#DDAAAA', '#DDAAAA' ]
+    __priorities_not_color_fg = [ '#000000', '#000000', '#000000', '#000000', '#000000', '#000000' ]
     __priorities_not_color_bg = [ '#FFFFFF', '#FFFFFF', '#FFFFFF', '#FFFFFF', '#FFFFFF', '#FFFFFF' ]
     __priorities_icon = [ 'green.png', 'green.png', 'yellow.png', 'amber.png', 'red.png', 'red.png' ]
     __priorities_sound = [ 'trigger_on.wav' , 'trigger_on.wav', 'trigger_on_warning.wav', 'trigger_on_average.wav', 'trigger_on_high.wav', 'trigger_on_disaster.wav' ]
