@@ -130,7 +130,6 @@
           <object class="GtkNotebook" id="notebook1">
             <property name="visible">True</property>
             <property name="can_focus">True</property>
-            <property name="show_tabs">False</property>
             <property name="show_border">False</property>
             <child>
               <object class="GtkScrolledWindow" id="scrwin_ListView">
@@ -297,36 +296,85 @@
                     <child>
                       <object class="GtkTreeViewColumn" id="g_hostgroup">
                         <property name="title" translatable="yes">Host Group</property>
+                        <child>
+                          <object class="GtkCellRendererText" id="hostgroup"/>
+                          <attributes>
+                            <attribute name="size">7</attribute>
+                            <attribute name="text">0</attribute>
+                          </attributes>
+                        </child>
                       </object>
                     </child>
                     <child>
                       <object class="GtkTreeViewColumn" id="g_disaster">
                         <property name="title" translatable="yes">Disaster</property>
+                        <child>
+                          <object class="GtkCellRendererText" id="disaster"/>
+                          <attributes>
+                            <attribute name="size">7</attribute>
+                            <attribute name="text">6</attribute>
+                          </attributes>
+                        </child>
                       </object>
                     </child>
                     <child>
                       <object class="GtkTreeViewColumn" id="g_high">
                         <property name="title" translatable="yes">High</property>
+                        <child>
+                          <object class="GtkCellRendererText" id="high"/>
+                          <attributes>
+                            <attribute name="size">7</attribute>
+                            <attribute name="text">5</attribute>
+                          </attributes>
+                        </child>
                       </object>
                     </child>
                     <child>
                       <object class="GtkTreeViewColumn" id="g_average">
                         <property name="title" translatable="yes">Average</property>
+                        <child>
+                          <object class="GtkCellRendererText" id="average"/>
+                          <attributes>
+                            <attribute name="size">7</attribute>
+                            <attribute name="text">4</attribute>
+                          </attributes>
+                        </child>
                       </object>
                     </child>
                     <child>
                       <object class="GtkTreeViewColumn" id="g_warning">
                         <property name="title" translatable="yes">Warning</property>
+                        <child>
+                          <object class="GtkCellRendererText" id="warning"/>
+                          <attributes>
+                            <attribute name="size">7</attribute>
+                            <attribute name="text">3</attribute>
+                          </attributes>
+                        </child>
                       </object>
                     </child>
                     <child>
                       <object class="GtkTreeViewColumn" id="g_information">
                         <property name="title" translatable="yes">Information</property>
+                        <child>
+                          <object class="GtkCellRendererText" id="information"/>
+                          <attributes>
+                            <attribute name="size">7</attribute>
+                            <attribute name="text">2</attribute>
+                          </attributes>
+                        </child>
                       </object>
                     </child>
                     <child>
                       <object class="GtkTreeViewColumn" id="g_notclassified">
                         <property name="title" translatable="yes">Not Classified</property>
+                        <child>
+                          <object class="GtkCellRendererText" id="notclassified"/>
+                          <attributes>
+                            <attribute name="size">7</attribute>
+                            <attribute name="text">1</attribute>
+                          </attributes>
+                        </child>
                       </object>
                     </child>
                   </object>

@@ -300,6 +300,14 @@ class zbx_trigger:
     def get_description(self):
         return self.__DESCRIPTION
 
+    def get_group(self):
+        for group in self.__GROUPS:
+            if group:
+                yield group
+            else:
+                yield False
+        return
+
     def get_groups(self):
         return self.__GROUPS
 
@@ -325,7 +333,8 @@ class zbx_trigger:
         self.__DESCRIPTION = value
 
     def set_groups(self, value):
-        self.__GROUPS.append(value)
+        for key, group in value.iteritems():
+            self.__GROUPS.append(group)
 
     def set_serveralias(self, value):
         self.__SERVERALIAS = value

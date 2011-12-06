@@ -50,7 +50,7 @@ try:
     from libs.configuration import configuration
     from libs.zabbix_api import ZabbixAPI, ZabbixAPIException
     from libs.zabbix import zbx_connections, zbx_priorities, zbx_connections, resource_path, zbx_triggers
-    from libs.views import zbx_listview
+    from libs.views import zbx_listview, zbx_groupview
     from settingsWindow import settingsWindow
 
     #import notify
@@ -93,9 +93,15 @@ class GTKZabbix:
         self.builder.add_from_file(filename)
 
         self.window = self.builder.get_object("mainWindow")
+
         self.list_zabbix_model = self.builder.get_object("treeZabbix")
         self.list_zabbix_store = zbx_listview()
         self.list_zabbix_model.set_model(self.list_zabbix_store)
+
+        self.group_zabbix_model = self.builder.get_object("treeZabbixGroup")
+        self.group_zabbix_store = zbx_groupview()
+        self.group_zabbix_model.set_model(self.group_zabbix_store)
+
         self.list_zabbix_store_ack = self.builder.get_object("crt_ack")
         self.lbl_lastupdated_num = self.builder.get_object("lbl_lastupdated_num")
 
@@ -178,6 +184,7 @@ class GTKZabbix:
         self.lbl_lastupdated_num.modify_font(pango.FontDescription(str(adj_fontsize.get_value())))
 
         self.list_zabbix_store.change_fontsize(int(adj_fontsize.get_value())*1000)
+        self.group_zabbix_store.change_fontsize(int(adj_fontsize.get_value())*1000)
 
     def update_dashboard(self, once = False):
         self.conf_threaded = configuration()
@@ -193,6 +200,7 @@ class GTKZabbix:
             gtk.gdk.threads_enter()
 
             try:
+                self.group_zabbix_store.add_triggers(triggers)
                 self.list_zabbix_store.add_triggers(triggers)
             except Exception as e:
                 print ("GTKZabbixNotify | Exception adding triggers:\n\t{0}".format(e))
@@ -242,7 +250,7 @@ class GTKZabbix:
 
             if once:
                 break
-            # self.notify.notify(4, "Server Name", "Trigger description")
+            
             time.sleep(self.conf_threaded.get_setting('checkinterval'))
         self.conf_threaded.close()
 

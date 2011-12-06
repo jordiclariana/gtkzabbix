@@ -61,10 +61,39 @@ LISTZABBIX = {
     'fontsize': 12
 }
 
-class zbx_listview(gtk.ListStore):
+GROUPZABBIX = {
+    'hostgroup': 0,
+    'notclassified': 1,
+    'information': 2,
+    'warning': 3,
+    'average': 4,
+    'high': 5,
+    'disaster': 6,
+    'fontsize': 7
+}
 
+class zbx_fontsize:        
     __fontsize = 10000 # 10 * 1000
 
+    def set_fontsize(self, value):
+        self.__fontsize=value
+    
+    def get_fontsize(self):
+        return self.__fontsize
+
+    def change_fontsize(self, value = None):
+        if value:
+            self.set_fontsize(value)
+
+        iter = self.get_iter_first()
+        while iter:
+            self.set_value(iter, self.COLUMNS['fontsize'], self.get_fontsize())
+            iter = self.iter_next(iter)
+
+class zbx_listview(gtk.ListStore, zbx_fontsize):
+
+    COLUMNS = LISTZABBIX
+     
     def __init__(self):
         super( zbx_listview, self ).__init__(
             gobject.TYPE_UINT,      # triggerid
@@ -178,21 +207,6 @@ class zbx_listview(gtk.ListStore):
                 iter = self.iter_next(iter)
         return deleted
 
-    def set_fontsize(self, value):
-        self.__fontsize=value
-    
-    def get_fontsize(self):
-        return self.__fontsize
-
-    def change_fontsize(self, value = None):
-        if value:
-            self.set_fontsize(value)
-
-        iter = self.get_iter_first()
-        while iter:
-            self.set_value(iter, LISTZABBIX['fontsize'], self.get_fontsize())
-            iter = self.iter_next(iter)
-
     def get_max_priority(self):
         max_prio = -1
         iter = self.get_iter_first()
@@ -218,7 +232,34 @@ class zbx_listview(gtk.ListStore):
             iter = self.iter_next(iter)
         return max_prio
 
-#class groupview(gtk.TreeView):
-#
-#	def __init__(self):
-#		pass
+
+class zbx_groupview(gtk.ListStore, zbx_fontsize):
+
+    COLUMNS = GROUPZABBIX
+    
+    def __init__(self):
+        super( zbx_groupview, self ).__init__(
+            gobject.TYPE_STRING,    # hostgroup
+            gobject.TYPE_UINT,      # notclassified
+            gobject.TYPE_UINT,      # information
+            gobject.TYPE_UINT,      # warning
+            gobject.TYPE_UINT,      # average
+            gobject.TYPE_UINT,      # high
+            gobject.TYPE_UINT,      # disaster
+            gobject.TYPE_UINT       # fontsize
+        )
+
+    def add_triggers(self, triggers, fontsize = None):
+        if fontsize:
+            self.set_fontsize(fontsize)
+        self.clear()
+
+        groups = {}
+        for trigger in triggers.get_triggers():
+            for group in trigger.get_group():
+                if not group in groups.keys():
+                    groups[group] = [group, 0, 0, 0, 0, 0, 0, self.get_fontsize()]
+                groups[group][trigger.get_priority()+1]=+1
+    
+        for key, group in groups.iteritems():
+            self.append(group)
