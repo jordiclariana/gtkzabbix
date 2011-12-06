@@ -167,7 +167,7 @@ class zbx_triggers:
             self.configuration = conf
         self.zbxConnections = zbx_connections(self.configuration)
         self.zbxConnections.init()
-        self.fetch()
+        #self.fetch()
 
     def fetch(self):
         self.zbxConnections.recheck()
@@ -178,7 +178,9 @@ class zbx_triggers:
                     {'active' : True,
                      'monitored': True,
                      'sortfield': 'lastchange',
-                     'filter': {'value': 1}}):
+                     'filter': {'value': 1},
+                     'withUnacknowledgedEvents': True}
+                     ):
                     
                     triggers_list.append(trigger.get('triggerid'))
         
@@ -187,6 +189,7 @@ class zbx_triggers:
                      'expandDescription': True,
                      'output': 'extend',
                      'expandData': True})
+
                 this_triggers_groups = zAPIConn.hostgroup.get({'triggerids': triggers_list, 'output': 'extend'})
                 
                 if type(this_trigger) is dict:
@@ -201,9 +204,17 @@ class zbx_triggers:
             except Exception as e:
                 print ("zbx_triggers | Unexpected error getting triggers from {0}:\n\t{1}".format(zAPIAlias, e))
     
-    def set_trigger(self, value):
-        self.__TRIGGERS.append(value)
-    
+    def set_trigger(self, trigger):
+        lookedup_trigger = self.search_trigger(trigger.get_id(), trigger.get_serveralias())
+        if lookedup_trigger:
+            if lookedup_trigger.get_lastchange() != trigger.get_lastchange():
+                self.del_trigger(trigger.get_id(), trigger.get_lastchange())
+            else:
+                return False
+
+        self.__TRIGGERS.append(trigger)
+        return True
+
     def get_trigger(self, triggerid):
         for trigger in self.__TRIGGERS:
             if trigger.get_id() == int(triggerid):
@@ -238,9 +249,25 @@ class zbx_triggers:
         except Exception as e:
             print ("zbx_triggers | Exception on formating new trigger from {0}:\n\t{1}".format(serveralias, e))
             return False
-
+        
         return new_trigger
+
+    def search_trigger(self, id, serveralias):
+        for trigger in self.get_triggers():
+            if trigger.get_id() == id and trigger.get_serveralias() == serveralias:
+                return trigger
+        return False
     
+    def del_trigger(self, id, serveralias):
+        new_triggers = []
+        for trigger in self.get_triggers():
+            if trigger.get_id() != id and trigger.get_serveralias() != serveralias:
+                new_triggers.append(trigger)
+        self.__TRIGGERS = new_triggers
+
+    def count(self):
+        return len(self.__TRIGGERS)
+
     TRIGGERS = property(get_trigger, set_trigger, None, None)
     
 class zbx_trigger:

@@ -127,146 +127,223 @@
           </packing>
         </child>
         <child>
-          <object class="GtkScrolledWindow" id="scrolledwindow1">
+          <object class="GtkNotebook" id="notebook1">
             <property name="visible">True</property>
             <property name="can_focus">True</property>
             <child>
-              <object class="GtkTreeView" id="treeZabbix">
+              <object class="GtkScrolledWindow" id="scrwin_ListView">
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
-                <property name="model">listZabbix</property>
-                <property name="search_column">5</property>
-                <property name="enable_grid_lines">both</property>
+                <property name="hscrollbar_policy">automatic</property>
+                <property name="vscrollbar_policy">automatic</property>
                 <child>
-                  <object class="GtkTreeViewColumn" id="ack">
-                    <property name="resizable">True</property>
-                    <property name="spacing">10</property>
-                    <property name="sizing">autosize</property>
-                    <property name="title" translatable="yes">ACK</property>
-                    <property name="clickable">True</property>
-                    <property name="widget">lbl_tv_ack</property>
-                    <property name="reorderable">True</property>
-                    <property name="sort_indicator">True</property>
-                    <property name="sort_column_id">10</property>
+                  <object class="GtkTreeView" id="treeZabbix">
+                    <property name="visible">True</property>
+                    <property name="can_focus">True</property>
+                    <property name="model">listZabbix</property>
+                    <property name="search_column">5</property>
+                    <property name="enable_grid_lines">both</property>
                     <child>
-                      <object class="GtkCellRendererToggle" id="crt_ack">
-                        <property name="cell_background">#d3d3d3</property>
+                      <object class="GtkTreeViewColumn" id="ack">
+                        <property name="spacing">10</property>
+                        <property name="sizing">autosize</property>
+                        <property name="title" translatable="yes">ACK</property>
+                        <property name="clickable">True</property>
+                        <property name="widget">lbl_tv_ack</property>
+                        <property name="reorderable">True</property>
+                        <property name="sort_indicator">True</property>
+                        <property name="sort_column_id">10</property>
+                        <child>
+                          <object class="GtkCellRendererToggle" id="crt_ack">
+                            <property name="cell_background">#d3d3d3</property>
+                          </object>
+                          <attributes>
+                            <attribute name="active">10</attribute>
+                          </attributes>
+                        </child>
                       </object>
-                      <attributes>
-                        <attribute name="active">10</attribute>
-                      </attributes>
                     </child>
-                  </object>
-                </child>
-                <child>
-                  <object class="GtkTreeViewColumn" id="vpriority">
-                    <property name="resizable">True</property>
-                    <property name="spacing">10</property>
-                    <property name="sizing">autosize</property>
-                    <property name="title" translatable="yes">Priority</property>
-                    <property name="clickable">True</property>
-                    <property name="widget">lbl_tv_priority</property>
-                    <property name="reorderable">True</property>
-                    <property name="sort_indicator">True</property>
-                    <property name="sort_column_id">3</property>
                     <child>
-                      <object class="GtkCellRendererText" id="crt_vpriority"/>
-                      <attributes>
-                        <attribute name="cell-background">8</attribute>
-                        <attribute name="background">8</attribute>
-                        <attribute name="foreground">9</attribute>
-                        <attribute name="markup">7</attribute>
-                        <attribute name="size">12</attribute>
-                        <attribute name="text">7</attribute>
-                      </attributes>
-                    </child>
-                  </object>
-                </child>
-                <child>
-                  <object class="GtkTreeViewColumn" id="vzalias">
-                    <property name="resizable">True</property>
-                    <property name="spacing">10</property>
-                    <property name="sizing">autosize</property>
-                    <property name="title" translatable="yes">Zabbix Server</property>
-                    <property name="clickable">True</property>
-                    <property name="widget">lbl_tv_zalias</property>
-                    <property name="reorderable">True</property>
-                    <property name="sort_indicator">True</property>
-                    <property name="sort_column_id">11</property>
-                    <child>
-                      <object class="GtkCellRendererText" id="crt_vzalias">
-                        <property name="cell_background">#d3d3d3</property>
+                      <object class="GtkTreeViewColumn" id="vpriority">
+                        <property name="spacing">10</property>
+                        <property name="sizing">autosize</property>
+                        <property name="title" translatable="yes">Priority</property>
+                        <property name="clickable">True</property>
+                        <property name="widget">lbl_tv_priority</property>
+                        <property name="reorderable">True</property>
+                        <property name="sort_indicator">True</property>
+                        <property name="sort_column_id">3</property>
+                        <child>
+                          <object class="GtkCellRendererText" id="crt_vpriority"/>
+                          <attributes>
+                            <attribute name="cell-background">8</attribute>
+                            <attribute name="background">8</attribute>
+                            <attribute name="foreground">9</attribute>
+                            <attribute name="markup">7</attribute>
+                            <attribute name="size">12</attribute>
+                            <attribute name="text">7</attribute>
+                          </attributes>
+                        </child>
                       </object>
-                      <attributes>
-                        <attribute name="size">12</attribute>
-                        <attribute name="text">11</attribute>
-                      </attributes>
                     </child>
-                  </object>
-                </child>
-                <child>
-                  <object class="GtkTreeViewColumn" id="host">
-                    <property name="resizable">True</property>
-                    <property name="spacing">10</property>
-                    <property name="sizing">autosize</property>
-                    <property name="title" translatable="yes">Hostname</property>
-                    <property name="clickable">True</property>
-                    <property name="widget">lbl_tv_host</property>
-                    <property name="reorderable">True</property>
-                    <property name="sort_indicator">True</property>
-                    <property name="sort_column_id">4</property>
                     <child>
-                      <object class="GtkCellRendererText" id="crt_host"/>
-                      <attributes>
-                        <attribute name="size">12</attribute>
-                        <attribute name="text">4</attribute>
-                      </attributes>
-                    </child>
-                  </object>
-                </child>
-                <child>
-                  <object class="GtkTreeViewColumn" id="description">
-                    <property name="resizable">True</property>
-                    <property name="spacing">10</property>
-                    <property name="sizing">autosize</property>
-                    <property name="title" translatable="yes">Description</property>
-                    <property name="clickable">True</property>
-                    <property name="widget">lbl_tv_description</property>
-                    <property name="reorderable">True</property>
-                    <property name="sort_indicator">True</property>
-                    <property name="sort_column_id">5</property>
-                    <child>
-                      <object class="GtkCellRendererText" id="crt_description">
-                        <property name="cell_background">#d3d3d3</property>
+                      <object class="GtkTreeViewColumn" id="vzalias">
+                        <property name="spacing">10</property>
+                        <property name="sizing">autosize</property>
+                        <property name="title" translatable="yes">Zabbix Server</property>
+                        <property name="clickable">True</property>
+                        <property name="widget">lbl_tv_zalias</property>
+                        <property name="reorderable">True</property>
+                        <property name="sort_indicator">True</property>
+                        <property name="sort_column_id">11</property>
+                        <child>
+                          <object class="GtkCellRendererText" id="crt_vzalias">
+                            <property name="cell_background">#d3d3d3</property>
+                          </object>
+                          <attributes>
+                            <attribute name="size">12</attribute>
+                            <attribute name="text">11</attribute>
+                          </attributes>
+                        </child>
                       </object>
-                      <attributes>
-                        <attribute name="size">12</attribute>
-                        <attribute name="text">5</attribute>
-                      </attributes>
                     </child>
-                  </object>
-                </child>
-                <child>
-                  <object class="GtkTreeViewColumn" id="vlastchange">
-                    <property name="resizable">True</property>
-                    <property name="spacing">10</property>
-                    <property name="sizing">autosize</property>
-                    <property name="title" translatable="yes">Last Change</property>
-                    <property name="clickable">True</property>
-                    <property name="widget">lbl_tv_lastchange</property>
-                    <property name="reorderable">True</property>
-                    <property name="sort_indicator">True</property>
-                    <property name="sort_column_id">2</property>
                     <child>
-                      <object class="GtkCellRendererText" id="crt_vlastchange"/>
-                      <attributes>
-                        <attribute name="size">12</attribute>
-                        <attribute name="text">6</attribute>
-                      </attributes>
+                      <object class="GtkTreeViewColumn" id="host">
+                        <property name="spacing">10</property>
+                        <property name="sizing">autosize</property>
+                        <property name="title" translatable="yes">Hostname</property>
+                        <property name="clickable">True</property>
+                        <property name="widget">lbl_tv_host</property>
+                        <property name="reorderable">True</property>
+                        <property name="sort_indicator">True</property>
+                        <property name="sort_column_id">4</property>
+                        <child>
+                          <object class="GtkCellRendererText" id="crt_host"/>
+                          <attributes>
+                            <attribute name="size">12</attribute>
+                            <attribute name="text">4</attribute>
+                          </attributes>
+                        </child>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkTreeViewColumn" id="description">
+                        <property name="spacing">10</property>
+                        <property name="sizing">autosize</property>
+                        <property name="title" translatable="yes">Description</property>
+                        <property name="clickable">True</property>
+                        <property name="widget">lbl_tv_description</property>
+                        <property name="reorderable">True</property>
+                        <property name="sort_indicator">True</property>
+                        <property name="sort_column_id">5</property>
+                        <child>
+                          <object class="GtkCellRendererText" id="crt_description">
+                            <property name="cell_background">#d3d3d3</property>
+                          </object>
+                          <attributes>
+                            <attribute name="size">12</attribute>
+                            <attribute name="text">5</attribute>
+                          </attributes>
+                        </child>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkTreeViewColumn" id="vlastchange">
+                        <property name="spacing">10</property>
+                        <property name="sizing">autosize</property>
+                        <property name="title" translatable="yes">Last Change</property>
+                        <property name="clickable">True</property>
+                        <property name="widget">lbl_tv_lastchange</property>
+                        <property name="reorderable">True</property>
+                        <property name="sort_indicator">True</property>
+                        <property name="sort_column_id">2</property>
+                        <child>
+                          <object class="GtkCellRendererText" id="crt_vlastchange"/>
+                          <attributes>
+                            <attribute name="size">12</attribute>
+                            <attribute name="text">6</attribute>
+                          </attributes>
+                        </child>
+                      </object>
                     </child>
                   </object>
                 </child>
               </object>
+            </child>
+            <child type="tab">
+              <object class="GtkLabel" id="lbl_page1">
+                <property name="visible">True</property>
+                <property name="can_focus">False</property>
+                <property name="label" translatable="yes">List View</property>
+              </object>
+              <packing>
+                <property name="tab_fill">False</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkScrolledWindow" id="scrwin_GroupView">
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="hscrollbar_policy">automatic</property>
+                <property name="vscrollbar_policy">automatic</property>
+                <child>
+                  <object class="GtkTreeView" id="treeZabbixGroup">
+                    <property name="visible">True</property>
+                    <property name="can_focus">True</property>
+                    <property name="model">listZabbix</property>
+                    <property name="enable_grid_lines">both</property>
+                    <child>
+                      <object class="GtkTreeViewColumn" id="g_hostgroup">
+                        <property name="title" translatable="yes">Host Group</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkTreeViewColumn" id="g_disaster">
+                        <property name="title" translatable="yes">Disaster</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkTreeViewColumn" id="g_high">
+                        <property name="title" translatable="yes">High</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkTreeViewColumn" id="g_average">
+                        <property name="title" translatable="yes">Average</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkTreeViewColumn" id="g_warning">
+                        <property name="title" translatable="yes">Warning</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkTreeViewColumn" id="g_information">
+                        <property name="title" translatable="yes">Information</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkTreeViewColumn" id="g_notclassified">
+                        <property name="title" translatable="yes">Not Classified</property>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+              </object>
+              <packing>
+                <property name="position">1</property>
+              </packing>
+            </child>
+            <child type="tab">
+              <object class="GtkLabel" id="lbl_page2">
+                <property name="visible">True</property>
+                <property name="can_focus">False</property>
+                <property name="label" translatable="yes">Group View</property>
+              </object>
+              <packing>
+                <property name="position">1</property>
+                <property name="tab_fill">False</property>
+              </packing>
             </child>
           </object>
           <packing>

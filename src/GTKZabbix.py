@@ -49,7 +49,7 @@ except Exception as e:
 try:
     from libs.configuration import configuration
     from libs.zabbix_api import ZabbixAPI, ZabbixAPIException
-    from libs.zabbix import zbx_connections, zbx_priorities, zbx_connections, resource_path
+    from libs.zabbix import zbx_connections, zbx_priorities, zbx_connections, resource_path, zbx_triggers
     from settingsWindow import settingsWindow
     #import notify
 except Exception as e:
@@ -144,7 +144,7 @@ class GTKZabbix:
         self.isFullscreen = False
         self.isControlRoomMode = False
 
-        self.window.maximize()
+        #self.window.maximize()
         if self.conf_main.get_setting('showdashboardinit'):
             self.conf_main.close()
             del self.conf_main
@@ -179,21 +179,21 @@ class GTKZabbix:
             self.list_zabbix_store.set_value(iter, LISTZABBIX['fontsize'], int(adj_fontsize.get_value())*1000)
             iter = self.list_zabbix_store.iter_next(iter)
 
-    def append_zbx_trigger(self, trigger, alias):
+    def append_zbx_trigger(self, trigger):
         adj_fontsize = self.builder.get_object("adj_fontsize")
         self.list_zabbix_store.append([
-            int(trigger.get('triggerid')),
-            int(trigger.get('hostid')),
-            int(trigger.get('lastchange')),
-            int(trigger.get('priority')),
-            trigger.get('host'),
-            trigger.get('description'),
-            datetime.datetime.fromtimestamp(int(trigger.get('lastchange'))).strftime('%Y-%m-%d %H:%M:%S'),
-            zbx_priorities(trigger.get('priority')).get_text(),
-            zbx_priorities(trigger.get('priority')).get_color(0),
-            zbx_priorities(trigger.get('priority')).get_color(1),
+            trigger.get_id(),
+            trigger.get_hostid(),
+            trigger.get_lastchange(),
+            trigger.get_priority(),
+            trigger.get_host(),
+            trigger.get_description(),
+            datetime.datetime.fromtimestamp(trigger.get_lastchange()).strftime('%Y-%m-%d %H:%M:%S'),
+            zbx_priorities(trigger.get_priority()).get_text(),
+            zbx_priorities(trigger.get_priority()).get_color(0),
+            zbx_priorities(trigger.get_priority()).get_color(1),
             0,
-            alias,
+            trigger.get_serveralias(),
             int(adj_fontsize.get_value())*1000]
         )
 
@@ -201,8 +201,8 @@ class GTKZabbix:
         #if ((time.time() - int(trigger.get('lastchange'))) < 300):
         #    notify.notify(trigger.get('priority'), alias + ": " + trigger.get('host'), trigger.get('description'), 10)
 
-        print ("Add {0} - {1} - {2}".format(trigger.get('triggerid'),
-            trigger.get('host'), trigger.get('description')))
+        print ("Add {0} - {1} - {2}".format(trigger.get_id(),
+            trigger.get_host(), trigger.get_description()))
 
 
     def add_zbx_triggers(self, triggers):
@@ -210,20 +210,20 @@ class GTKZabbix:
         # they have to be added or if in the other hand they already are in the list
         iter = self.list_zabbix_store.get_iter_first()
         
-        if not iter and len(triggers)>0: # List is empty, adding all items
-            for trigger in triggers:
-                self.append_zbx_trigger(trigger[1], trigger[0])
+        if not iter and triggers.count() > 0: # List is empty, adding all items
+            for trigger in triggers.get_triggers():
+                self.append_zbx_trigger(trigger)
         else:
-            for trigger in triggers:
+            for trigger in triggers.get_triggers():
                 found = False
                 while iter:
-                    if self.list_zabbix_store.get_value(iter, LISTZABBIX['triggerid']) == int(trigger[1].get('triggerid')) and \
-                        self.list_zabbix_store.get_value(iter, LISTZABBIX['vzalias']) == trigger[0]:
+                    if self.list_zabbix_store.get_value(iter, LISTZABBIX['triggerid']) == trigger.get_id() and \
+                        self.list_zabbix_store.get_value(iter, LISTZABBIX['vzalias']) == trigger.get_serveralias():
                         # Item already exist on the list
                         found = True
-                        if self.list_zabbix_store.get_value(iter, LISTZABBIX['lastchange']) < int(trigger[1].get('lastchange')):
+                        if self.list_zabbix_store.get_value(iter, LISTZABBIX['lastchange']) < int(trigger.get_lastchange()):
                             # Update lastchange of this trigger
-                            self.list_zabbix_store.set_value(iter, LISTZABBIX['lastchange'], int(trigger[1].get('lastchange')))
+                            self.list_zabbix_store.set_value(iter, LISTZABBIX['lastchange'], int(trigger.get_lastchange()))
                         iter = self.list_zabbix_store.get_iter_first()
                         break
                     iter = self.list_zabbix_store.iter_next(iter)
@@ -231,7 +231,7 @@ class GTKZabbix:
                 if not found:
                         # No item found, add it
                         self.crm_change_display(True)
-                        self.append_zbx_trigger(trigger[1], trigger[0])
+                        self.append_zbx_trigger(trigger)
                         # Start over again
                         iter = self.list_zabbix_store.get_iter_first()
 
@@ -241,9 +241,9 @@ class GTKZabbix:
         iter = self.list_zabbix_store.get_iter_first()
         while iter:
             delete_flag = True
-            for trigger in triggers:
-                if int(self.list_zabbix_store.get_value(iter, LISTZABBIX['triggerid'])) == int(trigger[1].get('triggerid')) and \
-                 self.list_zabbix_store.get_value(iter, LISTZABBIX['vzalias']) == trigger[0]:
+            for trigger in triggers.get_triggers():
+                if self.list_zabbix_store.get_value(iter, LISTZABBIX['triggerid']) == trigger.get_id() and \
+                 self.list_zabbix_store.get_value(iter, LISTZABBIX['vzalias']) == trigger.get_serveralias():
                     delete_flag = False
             if delete_flag:
                 print ("Delete {0} - {1} - {2}".format(self.list_zabbix_store.get_value(iter, LISTZABBIX['triggerid']),
@@ -292,52 +292,16 @@ class GTKZabbix:
                 self.list_zabbix_store.set_value(iter, LISTZABBIX['ack'], 1)
             iter = self.list_zabbix_store.iter_next(iter)
 
-    def get_zbx_triggers(self):
-        triggers = []
-        self.zbxConnections.recheck()
-        for zAPIAlias, zAPIConn in self.zbxConnections.connections():
-            triggers_list = []
-            try:
-                for trigger in zAPIConn.trigger.get(
-                    {'active' : True,
-                     'monitored': True,
-                     'sortfield': 'lastchange',
-                     'filter': {'value': 1},
-                     'withUnacknowledgedEvents': True}
-                    ):
-
-                    triggers_list.append(trigger.get('triggerid'))
-
-                this_trigger = zAPIConn.trigger.get(
-                    {'triggerids': triggers_list,
-                     'expandDescription': True,
-                     'output': 'extend',
-                     'expandData': True}
-                )
-
-                if type(this_trigger) is dict:
-                    for triggerid in this_trigger.keys():
-                        triggers.append([ zAPIAlias, this_trigger[triggerid] ])
-                elif type(this_trigger) is list:
-                    for trigger in this_trigger:
-                        triggers.append([ zAPIAlias, trigger ])
-                else:
-                    print ("Error parsing triggers. Not dict and not list. Is: {0}".format(type(this_trigger)))
-
-            except Exception as e:
-                print ("GTKZabbix | Unexpected error getting triggers from {0}:\n\t{1}".format(zAPIAlias, e))
-
-        return triggers
-
     def update_dashboard(self, once = False):
         self.conf_threaded = configuration()
-        self.zbxConnections = zbx_connections(self.conf_threaded)
-        self.zbxConnections.init()
         first = True
         no_triggers_timestamp = None
+        triggers = zbx_triggers()
+
         while True:
             print ("{0} | Updating dashboard".format(datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')))
-            triggers = self.get_zbx_triggers()
+
+            triggers.fetch()
             # Set threads_enter because we are going to change widgets properties on the wild using several threads.
             gtk.gdk.threads_enter()
             try:
@@ -374,7 +338,7 @@ class GTKZabbix:
                 self.play_sound(max_prio)
 
             # Control Room Mode
-            if len(triggers) == 0 and self.isControlRoomMode:
+            if triggers.count() == 0 and self.isControlRoomMode:
                 if not no_triggers_timestamp:
                     no_triggers_timestamp = time.time()
                 if time.time() > (no_triggers_timestamp + 300):
@@ -539,4 +503,8 @@ class GTKZabbix:
 if __name__ == '__main__':
     gtk.gdk.threads_init()
     app = GTKZabbix()
-    gtk.main()
+    try:
+        gtk.main()
+    except KeyboardInterrupt:
+        print("")
+
