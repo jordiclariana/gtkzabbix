@@ -112,6 +112,8 @@ class GTKZabbix:
            'on_sb_fontsize_value_changed': self.change_fontsize,
            'on_sc_fontsize_value_changed': self.change_fontsize,
            'on_mainWindow_key_press_event': self.keypress,
+           'on_treeZabbixGroup_button_press_event': self.on_click,
+           'on_treeZabbix_button_press_event': self.on_click,
         }
 
         self.builder.connect_signals(self.events_dic)
@@ -411,7 +413,17 @@ class GTKZabbix:
             print ("Exception on execution:\n{0}".format(e))
             return False
 
-
+    def on_click(self, widget, event):
+        if event.button == 1 and event.type == gtk.gdk.BUTTON_PRESS:
+            myselection = widget.get_selection()
+            model, selection = myselection.get_selected()
+            if isinstance(selection, gtk.TreeIter):
+                # If click is not over a row, unselect everyrow.
+                x, y, mods = widget.get_bin_window().get_pointer()
+                if not widget.get_path_at_pos(x, y):
+                    myselection.unselect_all()
+    
+        return False
 
 if __name__ == '__main__':
     gtk.gdk.threads_init()

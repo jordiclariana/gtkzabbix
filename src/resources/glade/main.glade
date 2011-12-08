@@ -182,6 +182,7 @@
                     <property name="model">listZabbix</property>
                     <property name="search_column">5</property>
                     <property name="enable_grid_lines">both</property>
+                    <signal name="button-press-event" handler="on_treeZabbix_button_press_event" swapped="no"/>
                     <child>
                       <object class="GtkTreeViewColumn" id="ack">
                         <property name="spacing">10</property>
@@ -331,6 +332,7 @@
                     <property name="can_focus">True</property>
                     <property name="model">listZabbix</property>
                     <property name="enable_grid_lines">both</property>
+                    <signal name="button-press-event" handler="on_treeZabbixGroup_button_press_event" swapped="no"/>
                     <child>
                       <object class="GtkTreeViewColumn" id="g_hostgroup">
                         <property name="spacing">10</property>
