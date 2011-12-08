@@ -14,10 +14,43 @@
     <property name="can_focus">False</property>
     <property name="stock">gtk-justify-left</property>
   </object>
+  <object class="GtkLabel" id="lbl_average">
+    <property name="visible">True</property>
+    <property name="can_focus">False</property>
+    <property name="label" translatable="yes">Average</property>
+  </object>
+  <object class="GtkLabel" id="lbl_disaster">
+    <property name="visible">True</property>
+    <property name="can_focus">False</property>
+    <property name="label" translatable="yes">Disaster</property>
+  </object>
+  <object class="GtkLabel" id="lbl_high">
+    <property name="visible">True</property>
+    <property name="can_focus">False</property>
+    <property name="label" translatable="yes">High</property>
+  </object>
+  <object class="GtkLabel" id="lbl_hostgroup">
+    <property name="visible">True</property>
+    <property name="can_focus">False</property>
+    <property name="label" translatable="yes">Host Group</property>
+  </object>
+  <object class="GtkLabel" id="lbl_information">
+    <property name="visible">True</property>
+    <property name="can_focus">False</property>
+    <property name="label" translatable="yes">Information</property>
+  </object>
+  <object class="GtkLabel" id="lbl_notclassified">
+    <property name="visible">True</property>
+    <property name="can_focus">False</property>
+    <property name="label" translatable="yes">Not Classified</property>
+  </object>
   <object class="GtkLabel" id="lbl_tv_ack">
     <property name="visible">True</property>
     <property name="can_focus">False</property>
     <property name="label" translatable="yes">ACK</property>
+    <attributes>
+      <attribute name="background" value="#ffffffffffff"/>
+    </attributes>
   </object>
   <object class="GtkLabel" id="lbl_tv_description">
     <property name="visible">True</property>
@@ -43,6 +76,11 @@
     <property name="visible">True</property>
     <property name="can_focus">False</property>
     <property name="label" translatable="yes">Zabbix Server</property>
+  </object>
+  <object class="GtkLabel" id="lbl_warning">
+    <property name="visible">True</property>
+    <property name="can_focus">False</property>
+    <property name="label" translatable="yes">Warning</property>
   </object>
   <object class="GtkListStore" id="listZabbix">
     <columns>
@@ -295,7 +333,14 @@
                     <property name="enable_grid_lines">both</property>
                     <child>
                       <object class="GtkTreeViewColumn" id="g_hostgroup">
+                        <property name="spacing">10</property>
+                        <property name="sizing">autosize</property>
                         <property name="title" translatable="yes">Host Group</property>
+                        <property name="clickable">True</property>
+                        <property name="widget">lbl_hostgroup</property>
+                        <property name="reorderable">True</property>
+                        <property name="sort_indicator">True</property>
+                        <property name="sort_column_id">0</property>
                         <child>
                           <object class="GtkCellRendererText" id="hostgroup"/>
                           <attributes>
@@ -307,7 +352,14 @@
                     </child>
                     <child>
                       <object class="GtkTreeViewColumn" id="g_disaster">
+                        <property name="spacing">10</property>
+                        <property name="sizing">autosize</property>
                         <property name="title" translatable="yes">Disaster</property>
+                        <property name="clickable">True</property>
+                        <property name="widget">lbl_disaster</property>
+                        <property name="reorderable">True</property>
+                        <property name="sort_indicator">True</property>
+                        <property name="sort_column_id">1</property>
                         <child>
                           <object class="GtkCellRendererText" id="disaster"/>
                           <attributes>
@@ -319,7 +371,14 @@
                     </child>
                     <child>
                       <object class="GtkTreeViewColumn" id="g_high">
+                        <property name="spacing">10</property>
+                        <property name="sizing">autosize</property>
                         <property name="title" translatable="yes">High</property>
+                        <property name="clickable">True</property>
+                        <property name="widget">lbl_high</property>
+                        <property name="reorderable">True</property>
+                        <property name="sort_indicator">True</property>
+                        <property name="sort_column_id">2</property>
                         <child>
                           <object class="GtkCellRendererText" id="high"/>
                           <attributes>
@@ -331,7 +390,14 @@
                     </child>
                     <child>
                       <object class="GtkTreeViewColumn" id="g_average">
+                        <property name="spacing">10</property>
+                        <property name="sizing">autosize</property>
                         <property name="title" translatable="yes">Average</property>
+                        <property name="clickable">True</property>
+                        <property name="widget">lbl_average</property>
+                        <property name="reorderable">True</property>
+                        <property name="sort_indicator">True</property>
+                        <property name="sort_column_id">3</property>
                         <child>
                           <object class="GtkCellRendererText" id="average"/>
                           <attributes>
@@ -343,7 +409,14 @@
                     </child>
                     <child>
                       <object class="GtkTreeViewColumn" id="g_warning">
+                        <property name="spacing">10</property>
+                        <property name="sizing">autosize</property>
                         <property name="title" translatable="yes">Warning</property>
+                        <property name="clickable">True</property>
+                        <property name="widget">lbl_warning</property>
+                        <property name="reorderable">True</property>
+                        <property name="sort_indicator">True</property>
+                        <property name="sort_column_id">4</property>
                         <child>
                           <object class="GtkCellRendererText" id="warning"/>
                           <attributes>
@@ -355,7 +428,14 @@
                     </child>
                     <child>
                       <object class="GtkTreeViewColumn" id="g_information">
+                        <property name="spacing">10</property>
+                        <property name="sizing">autosize</property>
                         <property name="title" translatable="yes">Information</property>
+                        <property name="clickable">True</property>
+                        <property name="widget">lbl_information</property>
+                        <property name="reorderable">True</property>
+                        <property name="sort_indicator">True</property>
+                        <property name="sort_column_id">5</property>
                         <child>
                           <object class="GtkCellRendererText" id="information"/>
                           <attributes>
@@ -367,7 +447,14 @@
                     </child>
                     <child>
                       <object class="GtkTreeViewColumn" id="g_notclassified">
+                        <property name="spacing">10</property>
+                        <property name="sizing">autosize</property>
                         <property name="title" translatable="yes">Not Classified</property>
+                        <property name="clickable">True</property>
+                        <property name="widget">lbl_notclassified</property>
+                        <property name="reorderable">True</property>
+                        <property name="sort_indicator">True</property>
+                        <property name="sort_column_id">6</property>
                         <child>
                           <object class="GtkCellRendererText" id="notclassified"/>
                           <attributes>

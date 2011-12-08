@@ -87,14 +87,14 @@ class zbx_fontsize:
 
         iter = self.get_iter_first()
         while iter:
-            self.set_value(iter, self.COLUMNS['fontsize'], self.get_fontsize())
+            self.set_value(iter, self.LISTCOLUMNS['fontsize'], self.get_fontsize())
             iter = self.iter_next(iter)
 
 class zbx_listview(gtk.ListStore, zbx_fontsize):
 
-    COLUMNS = LISTZABBIX
+    LISTCOLUMNS = LISTZABBIX
      
-    def __init__(self):
+    def __init__(self, model):
         super( zbx_listview, self ).__init__(
             gobject.TYPE_UINT,      # triggerid
             gobject.TYPE_UINT,      # hostid
@@ -110,6 +110,8 @@ class zbx_listview(gtk.ListStore, zbx_fontsize):
             gobject.TYPE_STRING,    # vzalias
             gobject.TYPE_UINT       # fontsize
         )
+        
+        self.model = model
 
     def auto_ack(self, seconds):
         if seconds == 0:
@@ -118,14 +120,14 @@ class zbx_listview(gtk.ListStore, zbx_fontsize):
         cur_time = time.time()
         iter = self.get_iter_first()
         while iter:
-            if (cur_time - self.get_value(iter, LISTZABBIX['lastchange'])) > seconds:
-                self.set_value(iter, LISTZABBIX['ack'], 1)
+            if (cur_time - self.get_value(iter, self.LISTCOLUMNS['lastchange'])) > seconds:
+                self.set_value(iter, self.LISTCOLUMNS['ack'], 1)
             iter = self.iter_next(iter)
 
     def ackall(self):
         iter = self.get_iter_first()
         while iter:
-            self.set_value(iter, LISTZABBIX['ack'], 1)
+            self.set_value(iter, self.LISTCOLUMNS['ack'], 1)
             iter = self.iter_next(iter)
 
     def append_trigger(self, trigger):
@@ -164,27 +166,20 @@ class zbx_listview(gtk.ListStore, zbx_fontsize):
         if not iter and triggers.count() > 0: # List is empty, adding all items
             for trigger in triggers.get_triggers():
                 self.append_trigger(trigger)
-        else:
+        elif triggers.count() > 0:
             for trigger in triggers.get_triggers():
                 found = False
                 while iter:
-                    if self.get_value(iter, LISTZABBIX['triggerid']) == trigger.get_id() and \
-                        self.get_value(iter, LISTZABBIX['vzalias']) == trigger.get_serveralias():
+                    if self.get_value(iter, self.LISTCOLUMNS['triggerid']) == trigger.get_id() and \
+                        self.get_value(iter, self.LISTCOLUMNS['vzalias']) == trigger.get_serveralias():
                         # Item already exist on the list
                         found = True
-                        if self.get_value(iter, LISTZABBIX['lastchange']) < int(trigger.get_lastchange()):
+                        if self.get_value(iter, self.LISTCOLUMNS['lastchange']) < int(trigger.get_lastchange()):
                             # Update lastchange of this trigger
-                            self.set_value(iter, LISTZABBIX['lastchange'], int(trigger.get_lastchange()))
+                            self.set_value(iter, self.LISTCOLUMNS['lastchange'], int(trigger.get_lastchange()))
                         iter = self.get_iter_first()
                         break
                     iter = self.iter_next(iter)
-
-                if not found:
-                        # No item found, add it
-                        self.crm_change_display(True)
-                        self.append_trigger(trigger)
-                        # Start over again
-                        iter = self.get_iter_first()
 
     def del_triggers(self, triggers):
         # Cleanup
@@ -193,12 +188,12 @@ class zbx_listview(gtk.ListStore, zbx_fontsize):
         while iter:
             delete_flag = True
             for trigger in triggers.get_triggers():
-                if self.get_value(iter, LISTZABBIX['triggerid']) == trigger.get_id() and \
-                 self.get_value(iter, LISTZABBIX['vzalias']) == trigger.get_serveralias():
+                if self.get_value(iter, self.LISTCOLUMNS['triggerid']) == trigger.get_id() and \
+                 self.get_value(iter, self.LISTCOLUMNS['vzalias']) == trigger.get_serveralias():
                     delete_flag = False
             if delete_flag:
-                print ("Delete {0} - {1} - {2}".format(self.get_value(iter, LISTZABBIX['triggerid']),
-                      self.get_value(iter, LISTZABBIX['host']), self.get_value(iter, LISTZABBIX['description'])))
+                print ("Delete {0} - {1} - {2}".format(self.get_value(iter, self.LISTCOLUMNS['triggerid']),
+                      self.get_value(iter, self.LISTCOLUMNS['host']), self.get_value(iter, self.LISTCOLUMNS['description'])))
                 deleted = True
                 self.remove(iter)
                 # Better get first iter again than keep on with current altered index
@@ -211,8 +206,8 @@ class zbx_listview(gtk.ListStore, zbx_fontsize):
         max_prio = -1
         iter = self.get_iter_first()
         while iter:
-            cur_prio = int(self.get_value(iter, LISTZABBIX['priority']))
-            cur_isack = int(self.get_value(iter, LISTZABBIX['ack']))
+            cur_prio = int(self.get_value(iter, self.LISTCOLUMNS['priority']))
+            cur_isack = int(self.get_value(iter, self.LISTCOLUMNS['ack']))
             if cur_prio > max_prio and cur_isack == 0:
                 max_prio = cur_prio
             iter = self.iter_next(iter)
@@ -222,9 +217,9 @@ class zbx_listview(gtk.ListStore, zbx_fontsize):
         max_prio = -1
         iter = self.get_iter_first()
         while iter:
-            cur_prio = int(self.get_value(iter, LISTZABBIX['priority']))
-            cur_isack = bool(self.get_value(iter, LISTZABBIX['ack']))
-            cur_timestamps = int(self.get_value(iter, LISTZABBIX['lastchange']))
+            cur_prio = int(self.get_value(iter, self.LISTCOLUMNS['priority']))
+            cur_isack = bool(self.get_value(iter, self.LISTCOLUMNS['ack']))
+            cur_timestamps = int(self.get_value(iter, self.LISTCOLUMNS['lastchange']))
             diff_time = (time.time() - cur_timestamps)
             if diff_time <= maxtime and cur_prio > max_prio \
                 and cur_isack == False and cur_prio >= minprio:
@@ -235,9 +230,17 @@ class zbx_listview(gtk.ListStore, zbx_fontsize):
 
 class zbx_groupview(gtk.ListStore, zbx_fontsize):
 
-    COLUMNS = GROUPZABBIX
-    
-    def __init__(self):
+    LISTCOLUMNS = GROUPZABBIX
+    COLUMNS = {
+    'notclassified': 6,
+    'information': 5,
+    'warning': 4,
+    'average': 3,
+    'high': 2,
+    'disaster': 1
+    }
+
+    def __init__(self, model):
         super( zbx_groupview, self ).__init__(
             gobject.TYPE_STRING,    # hostgroup
             gobject.TYPE_UINT,      # notclassified
@@ -248,6 +251,22 @@ class zbx_groupview(gtk.ListStore, zbx_fontsize):
             gobject.TYPE_UINT,      # disaster
             gobject.TYPE_UINT       # fontsize
         )
+
+        self.model = model
+        for column_name, column_num in self.LISTCOLUMNS.iteritems():
+            if column_num in range(self.COLUMNS['disaster'], self.COLUMNS['notclassified'] + 1):
+                column = self.model.get_column(self.COLUMNS[column_name])
+                column_cells = column.get_cell_renderers()
+                for column_cell in column_cells:
+                    column.set_cell_data_func(column_cell, self.set_cell_color, column_name)
+
+    def set_cell_color(self, column, cell_renderer, model, iter, column_name):
+        if model.get_value(iter, self.LISTCOLUMNS[column_name]) == 0:  
+            cell_renderer.set_property("background", zbx_priorities(0).get_color(0))
+            cell_renderer.set_property("foreground", zbx_priorities(0).get_color(1))
+        else:
+            cell_renderer.set_property("background", zbx_priorities(self.LISTCOLUMNS[column_name]-1).get_color(0))
+            cell_renderer.set_property("foreground", zbx_priorities(self.LISTCOLUMNS[column_name]-1).get_color(1))
 
     def add_triggers(self, triggers, fontsize = None):
         if fontsize:

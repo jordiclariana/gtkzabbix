@@ -95,11 +95,11 @@ class GTKZabbix:
         self.window = self.builder.get_object("mainWindow")
 
         self.list_zabbix_model = self.builder.get_object("treeZabbix")
-        self.list_zabbix_store = zbx_listview()
+        self.list_zabbix_store = zbx_listview(self.list_zabbix_model)
         self.list_zabbix_model.set_model(self.list_zabbix_store)
 
         self.group_zabbix_model = self.builder.get_object("treeZabbixGroup")
-        self.group_zabbix_store = zbx_groupview()
+        self.group_zabbix_store = zbx_groupview(self.group_zabbix_model)
         self.group_zabbix_model.set_model(self.group_zabbix_store)
 
         self.list_zabbix_store_ack = self.builder.get_object("crt_ack")
@@ -175,7 +175,14 @@ class GTKZabbix:
                           'lbl_tv_host',
                           'lbl_tv_description',
                           'lbl_tv_lastchange',
-                          'lbl_lastupdated' ]
+                          'lbl_lastupdated',
+                          'lbl_hostgroup',
+                          'lbl_disaster',
+                          'lbl_high',
+                          'lbl_average',
+                          'lbl_warning',
+                          'lbl_information',
+                          'lbl_notclassified' ]
 
         adj_fontsize = self.builder.get_object("adj_fontsize")
         for col_label in column_labels:
@@ -200,8 +207,10 @@ class GTKZabbix:
             gtk.gdk.threads_enter()
 
             try:
-                self.group_zabbix_store.add_triggers(triggers)
-                self.list_zabbix_store.add_triggers(triggers)
+                if triggers.count() > 0:
+                    self.group_zabbix_store.add_triggers(triggers)
+                    self.list_zabbix_store.add_triggers(triggers)
+                    self.crm_change_display(True)
             except Exception as e:
                 print ("GTKZabbixNotify | Exception adding triggers:\n\t{0}".format(e))
 
