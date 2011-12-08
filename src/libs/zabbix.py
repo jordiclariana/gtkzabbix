@@ -40,6 +40,7 @@ except Exception as e:
 
 class zbx_priorities:
     __priorities = [ 'Not classified', 'Informational', 'Warning', 'Average' ,'High', 'Disaster' ]
+    __priority_keys = [ 'notclassified', 'information', 'warning', 'average', 'high', 'disaster' ]
     __priorities_color_bg = [ '#00FF00', '#00FF00', '#FFFF00', '#FF8C00', '#FF0000', '#D02090' ]
     __priorities_color_fg = [ '#000000', '#000000', '#000000', '#000000', '#FFFFFF', '#FFFFFF' ]
     __priorities_not_color_fg = [ '#000000', '#000000', '#000000', '#000000', '#000000', '#000000' ]
@@ -51,7 +52,10 @@ class zbx_priorities:
     __empty_icon = 'empty.png'
 
     def __init__(self, priority = -1):
-        self.__PRIORITY = int(priority)
+        if priority in range(-1, len(self.__priorities)):
+            self.__PRIORITY = int(priority)
+        else:
+            raise Exception, "Wrong priority index"
     
     def get_text(self):
         return self.__priorities[self.__PRIORITY]
@@ -82,6 +86,12 @@ class zbx_priorities:
             return resource_path("resources/audio/{0}".format(self.__priorities_sound[self.__PRIORITY])).get()
         else:
             return resource_path("resources/audio/{0}".format(self.__priorities_sound_off)).get()
+
+    def get_key(self):
+        if self.__PRIORITY >= 0:
+            return self.__priority_keys[self.__PRIORITY]
+        else:
+            return self.__priority_keys[0]
 
 class zbx_connections:
     def __init__(self, conf = None):

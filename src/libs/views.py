@@ -45,33 +45,6 @@ except Exception as e:
     print ("Error loading debugging modules: {0}".format(e))
     sys.exit(1)
 
-LISTZABBIX = {
-    'triggerid': 0,
-    'hostid': 1,
-    'lastchange': 2,
-    'priority': 3,
-    'host': 4,
-    'description': 5,
-    'vlastchange': 6,
-    'vpriority': 7,
-    'priobackgroundcolor': 8,
-    'prioforegroundcolor': 9,
-    'ack': 10,
-    'vzalias': 11,
-    'fontsize': 12
-}
-
-GROUPZABBIX = {
-    'hostgroup': 0,
-    'notclassified': 1,
-    'information': 2,
-    'warning': 3,
-    'average': 4,
-    'high': 5,
-    'disaster': 6,
-    'fontsize': 7
-}
-
 class zbx_fontsize:        
     __fontsize = 10000 # 10 * 1000
 
@@ -88,11 +61,31 @@ class zbx_fontsize:
         iter = self.get_iter_first()
         while iter:
             self.set_value(iter, self.LISTCOLUMNS['fontsize'], self.get_fontsize())
+            if self.iter_has_child(iter):
+                child_iter = self.iter_children(iter)
+                while child_iter:
+                    self.set_value(child_iter, self.LISTCOLUMNS['fontsize'], self.get_fontsize())
+                    child_iter = self.iter_next(child_iter)
+                    
             iter = self.iter_next(iter)
 
 class zbx_listview(gtk.ListStore, zbx_fontsize):
 
-    LISTCOLUMNS = LISTZABBIX
+    LISTCOLUMNS = {
+        'triggerid': 0,
+        'hostid': 1,
+        'lastchange': 2,
+        'priority': 3,
+        'host': 4,
+        'description': 5,
+        'vlastchange': 6,
+        'vpriority': 7,
+        'priobackgroundcolor': 8,
+        'prioforegroundcolor': 9,
+        'ack': 10,
+        'vzalias': 11,
+        'fontsize': 12
+    }
      
     def __init__(self, model):
         super( zbx_listview, self ).__init__(
@@ -228,9 +221,19 @@ class zbx_listview(gtk.ListStore, zbx_fontsize):
         return max_prio
 
 
-class zbx_groupview(gtk.ListStore, zbx_fontsize):
+class zbx_groupview(gtk.TreeStore, zbx_fontsize):
 
-    LISTCOLUMNS = GROUPZABBIX
+    LISTCOLUMNS = {
+    'hostgroup': 0,
+    'notclassified': 1,
+    'information': 2,
+    'warning': 3,
+    'average': 4,
+    'high': 5,
+    'disaster': 6,
+    'fontsize': 7
+    }
+
     COLUMNS = {
     'notclassified': 6,
     'information': 5,
@@ -271,14 +274,59 @@ class zbx_groupview(gtk.ListStore, zbx_fontsize):
     def add_triggers(self, triggers, fontsize = None):
         if fontsize:
             self.set_fontsize(fontsize)
-        self.clear()
+        
+        self.current_triggers = triggers
 
-        groups = {}
-        for trigger in triggers.get_triggers():
+        groups_data = {}
+        serveraliases_data = {}
+
+        # Collect data and create rows if necessary
+        for trigger in self.current_triggers.get_triggers():
             for group in trigger.get_group():
-                if not group in groups.keys():
-                    groups[group] = [group, 0, 0, 0, 0, 0, 0, self.get_fontsize()]
-                groups[group][trigger.get_priority()+1]=+1
-    
-        for key, group in groups.iteritems():
-            self.append(group)
+                group_row = self.search(group)
+                if not group_row:
+                    group_row = self.append(None, [group, 0, 0, 0, 0, 0, 0, self.get_fontsize()])
+
+                if not group in groups_data.keys():
+                    groups_data[group] = [0, 0, 0, 0, 0, 0]
+
+                groups_data[group][trigger.get_priority()] =+ 1
+
+                serveralias_row = self.search(group, trigger.get_serveralias())
+                if not serveralias_row:
+                    serveralias_row = self.append(group_row, [trigger.get_serveralias(), 0, 0, 0, 0, 0, 0, self.get_fontsize()])
+
+                if not trigger.get_serveralias() in serveraliases_data.keys():
+                    serveraliases_data[trigger.get_serveralias()] = [0, 0, 0, 0, 0, 0]
+                
+                serveraliases_data[trigger.get_serveralias()][trigger.get_priority()] =+ 1
+
+        # Set collected data to the rows
+        for group, group_data in groups_data.iteritems():
+            group_row = self.search(group)
+            if group_row:
+                for prio in range(0, len(group_data)):
+                    self.set_value(group_row, self.LISTCOLUMNS[zbx_priorities(prio).get_key()], group_data[prio])
+
+                for serveralias, serveralias_data in serveraliases_data.iteritems():
+                    serveralias_row = self.search(group, serveralias)
+                    if serveralias_row:
+                        for prio in range(0, len(serveralias_data)):
+                            self.set_value(serveralias_row, self.LISTCOLUMNS[zbx_priorities(prio).get_key()], serveralias_data[prio])
+
+    def search(self, group, serveralias = None):
+        iter = self.get_iter_root()
+        while iter:
+            if group == self.get_value(iter, self.LISTCOLUMNS['hostgroup']):
+                if serveralias:
+                    if self.iter_has_child(iter):
+                        child_iter = self.iter_children(iter)
+                        while child_iter:
+                            if serveralias == self.get_value(child_iter, self.LISTCOLUMNS['hostgroup']):
+                                return child_iter
+                            child_iter = self.iter_next(child_iter)
+                    return False
+                else:
+                    return iter
+            iter = self.iter_next(iter)
+        return False

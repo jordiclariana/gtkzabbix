@@ -216,6 +216,7 @@ class GTKZabbix:
 
             if first:
                 first = False
+                self.group_zabbix_model.expand_all()
                 self.list_zabbix_store.set_sort_column_id(2, gtk.SORT_DESCENDING)
                 if self.conf_threaded.get_setting('ackalloninit'):
                     try:
@@ -227,6 +228,7 @@ class GTKZabbix:
             except Exception as e:
                 print ("GTKZabbixNotify | Exception deleting triggers:\n\t{0}".format(e))
 
+            
             self.list_zabbix_store.auto_ack(self.conf_threaded.get_setting('ackafterseconds'))
 
             max_prio = self.list_zabbix_store.get_play_alarm_priority(
