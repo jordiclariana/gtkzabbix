@@ -24,6 +24,7 @@ try:
     import time
     import subprocess
     import shlex
+    import logging
 except Exception as e:
     print ("Error loading system modules: {0}".format(e))
     sys.exit(1)
@@ -45,11 +46,19 @@ except Exception as e:
     print ("Error loading audio modules: {0}".format(e))
     sys.exit(1)
 
+# Misc modules
+try:
+    from apscheduler.scheduler import Scheduler
+except Exception as e:
+    print ("Error loading misc modules: {0}".format(e))
+    print ("Try to install them using 'pip'")
+    sys.exit(1)
+
 # Custom modules
 try:
     from libs.configuration import configuration
     from libs.zabbix_api import ZabbixAPI, ZabbixAPIException
-    from libs.zabbix import zbx_connections, zbx_priorities, zbx_connections, resource_path, zbx_triggers
+    from libs.zabbix import zbx_priorities, resource_path, zbx_triggers
     from libs.views import zbx_listview, zbx_groupview
     from settingsWindow import settingsWindow
 
@@ -83,10 +92,15 @@ LISTZABBIX = {
     'fontsize': 12
 }
 
+logging.basicConfig(filename='/tmp/GTKZabbix.log',level=logging.WARNING)
+
 class GTKZabbix:
 
     def __init__(self):
-        self.conf_main = configuration()
+
+        self.conf = configuration()
+
+        self.first = True
 
         filename = resource_path("resources/glade/main.glade").get()
         self.builder = gtk.Builder()
@@ -137,28 +151,26 @@ class GTKZabbix:
 
         self.list_zabbix_store.clear()
 
-        self.update_dashboard_thread = threading.Thread(target=self.update_dashboard)
-        self.update_dashboard_thread.setDaemon(True)
-        self.update_dashboard_thread.start()
+        self.triggers = zbx_triggers(self.conf)
 
-        self.appind_blink_thread = threading.Thread(target=self.appind_blink)
-        self.appind_blink_thread.setDaemon(True)
-        self.appind_blink_thread.start()
+        self.sched = Scheduler({'daemonic': False})
+        self.sched.start()
 
-        self.priocolumn_blink_thread = threading.Thread(target=self.priocolumn_blink)
-        self.priocolumn_blink_thread.setDaemon(True)
-        self.priocolumn_blink_thread.start()
-        #gobject.timeout_add(30000, self.update_dashboard)
-        #gobject.timeout_add(750, self.appind_blink)
-        #gobject.timeout_add(750, self.priocolumn_blink)
+        self.sched.add_interval_job(self.update_dashboard,
+            seconds = int(self.conf.get_setting('checkinterval')),
+            start_date = datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M'),
+            args = [self.conf])
+
+        self.sched.add_interval_job(self.appind_blink, seconds = 1)
+
+        self.sched.add_interval_job(self.priocolumn_blink, seconds = 1)
 
         self.isFullscreen = False
         self.isControlRoomMode = False
 
-        #self.window.maximize()
-        if self.conf_main.get_setting('showdashboardinit'):
-            self.conf_main.close()
-            del self.conf_main
+        if self.conf.get_setting('showdashboardinit'):
+            self.conf.close()
+            del self.conf
             self.window.present()
 
     def keypress(self, widget, event = None):
@@ -195,54 +207,52 @@ class GTKZabbix:
         self.list_zabbix_store.change_fontsize(int(adj_fontsize.get_value())*1000)
         self.group_zabbix_store.change_fontsize(int(adj_fontsize.get_value())*1000)
 
-    def update_dashboard(self, once = False):
-        self.conf_threaded = configuration()
-        first = True
+    def update_dashboard(self, conf, once = False):
+        self.conf = conf
         no_triggers_timestamp = None
-        triggers = zbx_triggers()
 
-        while True:
-            print ("{0} | Updating dashboard".format(datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')))
-            
-            triggers.fetch()
-            # Set threads_enter because we are going to change widgets properties on the wild using several threads.
-            gtk.gdk.threads_enter()
+        print ("{0} | Updating dashboard".format(datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')))
+        
+        self.triggers.fetch()
+        # Set threads_enter because we are going to change widgets properties on the wild using several threads.
+        gtk.gdk.threads_enter()
 
-            try:
-                if triggers.count() > 0:
-                    self.group_zabbix_store.add_triggers(triggers)
-                    self.list_zabbix_store.add_triggers(triggers)
-                    self.crm_change_display(True)
-            except Exception as e:
-                print ("GTKZabbixNotify | Exception adding triggers:\n\t{0}".format(e))
+        try:
+            if self.triggers.count() > 0:
+                self.group_zabbix_store.add_triggers(self.triggers)
+                self.list_zabbix_store.add_triggers(self.triggers)
+                self.crm_change_display(True)
+        except Exception as e:
+            print ("GTKZabbixNotify | Exception adding triggers:\n\t{0}".format(e))
 
-            if first:
-                first = False
-                self.group_zabbix_model.expand_all()
-                self.list_zabbix_store.set_sort_column_id(2, gtk.SORT_DESCENDING)
-                if self.conf_threaded.get_setting('ackalloninit'):
-                    try:
-                        self.ackall(None)
-                    except Exception as e:
-                        print ("GTKZabbixNotify | Exception ACKing triggers:\n\t{0}".format(e))
-            try:
-                deleted = self.list_zabbix_store.del_triggers(triggers)
-            except Exception as e:
-                print ("GTKZabbixNotify | Exception deleting triggers:\n\t{0}".format(e))
+        if self.first:
+            self.first = False
+            self.group_zabbix_model.expand_all()
+            self.list_zabbix_store.set_sort_column_id(2, gtk.SORT_DESCENDING)
+            if self.conf.get_setting('ackalloninit'):
+                try:
+                    self.ackall(None)
+                except Exception as e:
+                    print ("GTKZabbixNotify | Exception ACKing triggers:\n\t{0}".format(e))
+        try:
+            deleted = self.list_zabbix_store.del_triggers(self.triggers)
+        except Exception as e:
+            print ("GTKZabbixNotify | Exception deleting triggers:\n\t{0}".format(e))
 
-            
-            self.list_zabbix_store.auto_ack(self.conf_threaded.get_setting('ackafterseconds'))
+        
+        self.list_zabbix_store.auto_ack(self.conf.get_setting('ackafterseconds'))
 
-            max_prio = self.list_zabbix_store.get_play_alarm_priority(
-                self.conf_threaded.get_setting('playsoundiftriggerlastchange'),
-                self.conf_threaded.get_setting('playifprio'))
+        max_prio = self.list_zabbix_store.get_play_alarm_priority(
+            self.conf.get_setting('playsoundiftriggerlastchange'),
+            self.conf.get_setting('playifprio'))
 
-            self.lbl_lastupdated_num.set_text(datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
-            # Leaving dangerous section
-            gtk.gdk.threads_leave()
+        self.lbl_lastupdated_num.set_text(datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
+        # Leaving dangerous section
+        gtk.gdk.threads_leave()
 
+        if self.conf.get_setting('soundenable'):
             # Play sound if we have delete triggers (and if is it set to do so)
-            if deleted and self.conf_threaded.get_setting('sounddelete'):
+            if deleted and self.conf.get_setting('sounddelete'):
                 self.play_sound(-1)
                 if max_prio >= 0:
                     time.sleep(0.75)
@@ -251,21 +261,17 @@ class GTKZabbix:
             if max_prio >= 0:
                 self.play_sound(max_prio)
 
-            # Control Room Mode
-            if triggers.count() == 0 and self.isControlRoomMode:
-                if not no_triggers_timestamp:
-                    no_triggers_timestamp = time.time()
-                if time.time() > (no_triggers_timestamp + 300):
-                    self.crm_change_display(False)
-            elif no_triggers_timestamp:
-                no_triggers_timestamp = None
-                self.crm_change_display(True)
+        # Control Room Mode
+        if self.triggers.count() == 0 and self.isControlRoomMode:
+            if not no_triggers_timestamp:
+                no_triggers_timestamp = time.time()
+            if time.time() > (no_triggers_timestamp + 300):
+                self.crm_change_display(False)
+        elif no_triggers_timestamp:
+            no_triggers_timestamp = None
+            self.crm_change_display(True)
 
-            if once:
-                break
-            
-            time.sleep(self.conf_threaded.get_setting('checkinterval'))
-        self.conf_threaded.close()
+        self.conf.close()
 
     def menu_setup(self):
         self.menu = gtk.Menu()
@@ -311,75 +317,71 @@ class GTKZabbix:
 
     def quit(self, widget, data=None):
         print ("Quit!")
+        self.sched.shutdown(wait=False)
         gtk.main_quit()
 
     def appind_blink(self):
-        while True:
+        counter = 0
+        gtk.gdk.threads_enter()
+        if not hasattr(self, 'blinkFlag'):
+            self.blinkFlag = True
+
+        iter = self.list_zabbix_store.get_iter_first()
+        while iter:
             counter = 0
-            gtk.gdk.threads_enter()
-            if not hasattr(self, 'blinkFlag'):
-                self.blinkFlag = True
+            if self.list_zabbix_store.get_value(iter, LISTZABBIX['ack']) == 0:
+                if self.blinkFlag:
+                    self.ind.set_icon(
+                        zbx_priorities(
+                            self.list_zabbix_store.get_max_priority()
+                        ).get_icon()
+                    )
 
-            iter = self.list_zabbix_store.get_iter_first()
-            while iter:
-                counter = 0
-                if self.list_zabbix_store.get_value(iter, LISTZABBIX['ack']) == 0:
-                    if self.blinkFlag:
-                        self.ind.set_icon(
-                            zbx_priorities(
-                                self.list_zabbix_store.get_max_priority()
-                            ).get_icon()
-                        )
-
-                    else:
-                        self.ind.set_icon(zbx_priorities().get_empty_icon())
-                        self.window.set_icon_from_file(zbx_priorities().get_empty_icon())
-                    counter = counter + 1
-                    break
-                iter=self.list_zabbix_store.iter_next(iter)
-            if counter == 0:
-                if self.ind.get_icon() != zbx_priorities().get_icon() :
-                    self.ind.set_icon(zbx_priorities().get_icon())
-                    self.window.set_icon_from_file(zbx_priorities().get_icon())
-            gtk.gdk.threads_leave()
-            time.sleep(0.75)
+                else:
+                    self.ind.set_icon(zbx_priorities().get_empty_icon())
+                    self.window.set_icon_from_file(zbx_priorities().get_empty_icon())
+                counter = counter + 1
+                break
+            iter=self.list_zabbix_store.iter_next(iter)
+        if counter == 0:
+            if self.ind.get_icon() != zbx_priorities().get_icon() :
+                self.ind.set_icon(zbx_priorities().get_icon())
+                self.window.set_icon_from_file(zbx_priorities().get_icon())
+        gtk.gdk.threads_leave()
 
     def priocolumn_blink(self):
-        while True:
-            gtk.gdk.threads_enter()
-            if not hasattr(self, 'blinkFlag'):
-                self.blinkFlag = True
+        gtk.gdk.threads_enter()
+        if not hasattr(self, 'blinkFlag'):
+            self.blinkFlag = True
 
-            iter = self.list_zabbix_store.get_iter_first()
-            while iter:
-                if self.list_zabbix_store.get_value(iter, LISTZABBIX['ack']) == 1: # Is ACKed?
-                    if self.list_zabbix_store.get_value(iter, LISTZABBIX['priobackgroundcolor']) == zbx_priorities(self.list_zabbix_store.get_value(iter, LISTZABBIX['priority'])).get_not_color(0):
-                        self.list_zabbix_store.set_value(iter, LISTZABBIX['priobackgroundcolor'],
-                             zbx_priorities(self.list_zabbix_store.get_value(iter, LISTZABBIX['priority'])).get_color(0))
-                        self.list_zabbix_store.set_value(iter, LISTZABBIX['prioforegroundcolor'],
-                             zbx_priorities(self.list_zabbix_store.get_value(iter, LISTZABBIX['priority'])).get_color(1))
-                else: # If not blink
-                    if self.blinkFlag:
-                        self.list_zabbix_store.set_value(iter, LISTZABBIX['priobackgroundcolor'],
-                             zbx_priorities(self.list_zabbix_store.get_value(iter, LISTZABBIX['priority'])).get_color(0))
-                        self.list_zabbix_store.set_value(iter, LISTZABBIX['prioforegroundcolor'],
-                             zbx_priorities(self.list_zabbix_store.get_value(iter, LISTZABBIX['priority'])).get_color(1))
-                    else:
-                        self.list_zabbix_store.set_value(iter, LISTZABBIX['priobackgroundcolor'],
-                             zbx_priorities(self.list_zabbix_store.get_value(iter, LISTZABBIX['priority'])).get_not_color(0))
-                        self.list_zabbix_store.set_value(iter, LISTZABBIX['prioforegroundcolor'],
-                             zbx_priorities(self.list_zabbix_store.get_value(iter, LISTZABBIX['priority'])).get_not_color(1))
+        iter = self.list_zabbix_store.get_iter_first()
+        while iter:
+            if self.list_zabbix_store.get_value(iter, LISTZABBIX['ack']) == 1: # Is ACKed?
+                if self.list_zabbix_store.get_value(iter, LISTZABBIX['priobackgroundcolor']) == zbx_priorities(self.list_zabbix_store.get_value(iter, LISTZABBIX['priority'])).get_not_color(0):
+                    self.list_zabbix_store.set_value(iter, LISTZABBIX['priobackgroundcolor'],
+                         zbx_priorities(self.list_zabbix_store.get_value(iter, LISTZABBIX['priority'])).get_color(0))
+                    self.list_zabbix_store.set_value(iter, LISTZABBIX['prioforegroundcolor'],
+                         zbx_priorities(self.list_zabbix_store.get_value(iter, LISTZABBIX['priority'])).get_color(1))
+            else: # If not blink
+                if self.blinkFlag:
+                    self.list_zabbix_store.set_value(iter, LISTZABBIX['priobackgroundcolor'],
+                         zbx_priorities(self.list_zabbix_store.get_value(iter, LISTZABBIX['priority'])).get_color(0))
+                    self.list_zabbix_store.set_value(iter, LISTZABBIX['prioforegroundcolor'],
+                         zbx_priorities(self.list_zabbix_store.get_value(iter, LISTZABBIX['priority'])).get_color(1))
+                else:
+                    self.list_zabbix_store.set_value(iter, LISTZABBIX['priobackgroundcolor'],
+                         zbx_priorities(self.list_zabbix_store.get_value(iter, LISTZABBIX['priority'])).get_not_color(0))
+                    self.list_zabbix_store.set_value(iter, LISTZABBIX['prioforegroundcolor'],
+                         zbx_priorities(self.list_zabbix_store.get_value(iter, LISTZABBIX['priority'])).get_not_color(1))
 
-                iter=self.list_zabbix_store.iter_next(iter)
-            gtk.gdk.threads_leave()
-            self.blinkFlag = not self.blinkFlag
-            time.sleep(0.75)
+            iter=self.list_zabbix_store.iter_next(iter)
+        gtk.gdk.threads_leave()
+        self.blinkFlag = not self.blinkFlag
 
     def play_sound(self, priority):
-        if self.conf_threaded.get_setting('soundenable'):
-            uri = 'file://' + zbx_priorities(priority).get_sound()
-            self.gstPlayer.set_property('uri', uri)
-            self.gstPlayer.set_state(gst.STATE_PLAYING)
+        uri = 'file://' + zbx_priorities(priority).get_sound()
+        self.gstPlayer.set_property('uri', uri)
+        self.gstPlayer.set_state(gst.STATE_PLAYING)
 
     def gstplayer_on_message(self, bus, message):
         t = message.type
@@ -431,5 +433,5 @@ if __name__ == '__main__':
     try:
         gtk.main()
     except KeyboardInterrupt:
-        print("")
+        print ("")
 

@@ -125,7 +125,7 @@ class settingsWindow:
         self.servers_liststore.clear()
         servers = self.conf.get_servers()
         for server in servers:
-            self.servers_liststore.append([server['alias'], server['uri'], server['username'], server['enabled']])
+            self.servers_liststore.append([server['alias'], server['uri'], server['username'], int(server['enabled'])])
         
     def save(self, widget, data = None):
         for setting in self.__SETTINGS_LIST:
@@ -185,7 +185,7 @@ class settingsWindow:
             self.txt_serveruri.modify_base(gtk.STATE_NORMAL, gtk.gdk.color_parse("#FFFFFF"))
             self.txt_serverusername.set_text(selectedServer['username'])
             self.txt_serverusername.modify_base(gtk.STATE_NORMAL, gtk.gdk.color_parse("#FFFFFF"))
-            self.cb_serverenabled.set_active(selectedServer['enabled'])
+            self.cb_serverenabled.set_active(int(selectedServer['enabled']))
             self.cb_serverenabled.modify_base(gtk.STATE_NORMAL, gtk.gdk.color_parse("#FFFFFF"))
             self.serversWindow.show()
     

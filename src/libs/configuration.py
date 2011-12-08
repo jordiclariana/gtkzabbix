@@ -26,8 +26,12 @@ except Exception as e:
 try:
     import sqlite3
     import base64
+    import sqlalchemy
+    from sqlalchemy.ext.declarative import declarative_base
+    from sqlalchemy.pool import NullPool
 except Exception as e:
     print ("Error loading misc modules: {0}".format(e))
+    print ("Try to install them using 'pip': pip install <module name>")
     sys.exit(1)
 
 # Debugging
@@ -39,8 +43,26 @@ except Exception as e:
 
 class configuration:
     
-    __SERVERS_COLUMNS={'alias': 0, 'uri': 1, 'username': 2, 'password': 3, 'enabled': 4}
     __SERVERS = []
+
+    Base = declarative_base()
+
+    class Servers(Base):
+
+        __tablename__ = 'servers'
+
+        alias = sqlalchemy.Column(sqlalchemy.String, primary_key=True)
+        uri = sqlalchemy.Column(sqlalchemy.String)
+        username = sqlalchemy.Column(sqlalchemy.String)
+        password = sqlalchemy.Column(sqlalchemy.String)
+        enabled = sqlalchemy.Column(sqlalchemy.String)
+        
+    class Settings(Base):
+        
+        __tablename__ = 'settings'
+
+        name = sqlalchemy.Column(sqlalchemy.String, primary_key=True)
+        value = sqlalchemy.Column(sqlalchemy.Integer)
 
     def __init__(self):
         self.defaultDBFile = os.path.expanduser('~') + "/.GTKZabbixNotify.sqlite"
@@ -59,58 +81,68 @@ class configuration:
         return base64.b64decode(password)
     
     def open_db(self):
-        self.SQLconn = sqlite3.connect(self.defaultDBFile) #, check_same_thread = False)
-        SQLcur = self.SQLconn.cursor()
+        self.db = sqlalchemy.create_engine('sqlite:///' + self.defaultDBFile, poolclass = NullPool, echo_pool = True) #, connect_args={'check_same_thread':False}, echo_pool = True)
+        self.db.echo = False
+        self.metadata = sqlalchemy.MetaData(self.db)
+
         if self.defaultDBFile == ":memory:":
             self.init_db()
         else:
             try:
-                SQLcur.execute("SELECT * FROM servers")
-                SQLcur.execute("SELECT * FROM settings")
+                self.conf_servers = sqlalchemy.Table('servers', self.metadata, autoload=True)
+                self.conf_settings = sqlalchemy.Table('settings', self.metadata, autoload=True)
+                self.Session = sqlalchemy.orm.sessionmaker(bind=self.db)
+                self.SQLSession = self.Session()
             except:
                 self.init_db()
+
         st = os.stat(self.defaultDBFile)
         if str(oct(stat.S_IMODE(st[stat.ST_MODE]))) != "0600":
             os.chmod(self.defaultDBFile,0600)
-        SQLcur.close()
         
     def close_db(self):
         if self.defaultDBFile != ":memory:":
-            self.SQLconn.commit()
-            self.SQLconn.close()
+            self.SQLSession.flush()
+            self.SQLSession.close()
         
     def init_db(self):
-        SQLcur = self.SQLconn.cursor()
-        SQLcur.executescript("""
-            CREATE TABLE servers (
-                'alias', 'uri', 'username', 'password', 'enabled'
-            );
-            
-            CREATE TABLE settings (
-                'name', 'value'
-            );
-            
-            INSERT INTO settings VALUES ('checkinterval', 120.0);
-            INSERT INTO settings VALUES ('soundenable', 1);
-            INSERT INTO settings VALUES ('ackalloninit', 0);
-            INSERT INTO settings VALUES ('playsoundiftriggerlastchange', 120.0);
-            INSERT INTO settings VALUES ('showdashboardinit', 1);
-            INSERT INTO settings VALUES ('playifprio', 0);
-            INSERT INTO settings VALUES ('ackafterseconds', 60.0);
-            INSERT INTO settings VALUES ('sounddelete', 1);
+        self.Base.metadata.create_all(self.db) 
 
-        """)
-        SQLcur.close()
+        self.conf_servers = sqlalchemy.Table('servers', self.metadata, autoload=True)
+        self.conf_settings = sqlalchemy.Table('settings', self.metadata, autoload=True)
+
+        self.Session = sqlalchemy.orm.sessionmaker(bind=self.db)
+        self.SQLSession = self.Session()
+
+        s_i = self.conf_settings.insert()
+        s_i.execute(
+            { 'name': 'checkinterval', 'value': "120.0" },
+            { 'name': 'soundenable', 'value': "1" },
+            { 'name': 'ackalloninit', 'value': "0" },
+            { 'name': 'playsoundiftriggerlastchange', 'value': "120.0" },
+            { 'name': 'showdashboardinit', 'value': "1" },
+            { 'name': 'playifprio', 'value': "0" },
+            { 'name': 'ackafterseconds', 'value': "60.0" },
+            { 'name': 'sounddelete', 'value': "1" },
+        )
+
+        self.SQLSession.flush()
 
     def set_server(self, alias, uri, username, password, enabled):
-        SQLcur = self.SQLconn.cursor()
         if self.get_total_servers() == 0:
             self.fetch_servers()
 
         servers = self.get_servers(alias)
         if len(servers) == 0:
-            SQLcur.execute("INSERT INTO servers VALUES (?, ?, ?, ?, ?)",
-                                ( alias, uri, username, self.set_password(password), enabled ))
+            new_server = self.Servers()
+            new_server.alias = alias
+            new_server.uri = uri
+            new_server.username = username
+            new_server.password = self.set_password(password)
+            new_server.enabled = enabled
+
+            self.SQLSession.add(new_server)
+            self.SQLSession.flush()
         else:
             for server in servers:
                 if not (server['uri'] == uri and \
@@ -118,22 +150,24 @@ class configuration:
                         self.check_password(password, server['password']) and \
                         server['enabled'] == enabled):
                     self.mod_server(alias, uri, username, self.set_password(password), enabled)
-        self.SQLconn.commit()
-        SQLcur.close()
     
     def mod_server(self, alias, uri, username, password, enabled):
-        SQLcur = self.SQLconn.cursor()
-        SQLcur.execute("UPDATE servers SET uri=?, username=?, password=?, enabled=? WHERE alias=?",
-                             (uri, username, password, enabled, alias))
-        self.SQLconn.commit()
-        SQLcur.close()
-    
-    def del_server(self, alias):
-        SQLcur = self.SQLconn.cursor()
-        SQLcur.execute("DELETE FROM servers WHERE alias=?", (alias,))
-        self.SQLconn.commit()
-        SQLcur.close()
+        server = self.SQLSession.query(self.Servers).filter(self.Servers.alias == alias)
         
+        server.uri = uri
+        server.username = username
+        server.password = password
+        server.enabled = enabled
+
+        self.SQLSession.flush()
+            
+    def del_server(self, alias):
+        server = self.SQLSession.query(self.Servers).filter(self.Servers.alias == alias)
+
+        self.SQLSession.delete(server)
+
+        self.SQLSession.flush()
+
     def get_servers(self, alias = None, enabled = None):
         servers = []
         self.fetch_servers()
@@ -151,18 +185,16 @@ class configuration:
         return servers
 
     def fetch_servers(self):
-        SQLcur = self.SQLconn.cursor()
-        SQLcur.execute("SELECT * FROM servers")
+        servers = self.SQLSession.query(self.Servers)
         
         self.__SERVERS = []
-        for server in SQLcur.fetchall():
-            self.__SERVERS.append({'alias': server[self.__SERVERS_COLUMNS['alias']],
-                                                                       'uri': server[self.__SERVERS_COLUMNS['uri']],
-                                                                       'username': server[self.__SERVERS_COLUMNS['username']], 
-                                                                       'password': server[self.__SERVERS_COLUMNS['password']], 
-                                                                       'enabled': server[self.__SERVERS_COLUMNS['enabled']]}
-                                                                       )
-        SQLcur.close()
+        for server in servers:
+            self.__SERVERS.append({'alias': server.alias,
+                                   'uri': server.uri,
+                                   'username': server.username, 
+                                   'password': server.password, 
+                                   'enabled': server.enabled}
+                                   )
         
     def get_server(self, id, column):
         if id in range(0, len(self.__SERVERS)):
@@ -178,26 +210,22 @@ class configuration:
             return 0
         
     def get_setting(self, name):
-        SQLcur = self.SQLconn.cursor()
-        SQLcur.execute("SELECT value FROM settings WHERE name=?", (name,))
-        value = SQLcur.fetchall()
-        SQLcur.close()
-        if len(value) > 0 and len(value[0]) > 0:
-            return value[0][0]
-        else:
+        setting = self.SQLSession.query(self.Settings).filter(self.Settings.name == name)
+        try:
+            return setting.one().value
+        except:
             return None
         
     def set_setting(self, name, value):
-        SQLcur = self.SQLconn.cursor()
-        SQLcur.execute("SELECT value FROM settings WHERE name=?", (name,))
-        settings = SQLcur.fetchall()
-        if len(settings) == 0:
-            SQLcur.execute("INSERT INTO settings VALUES (?,?)", (name, value))
-        elif settings[0][0] != value:
-            SQLcur.execute("UPDATE settings SET value=? WHERE name=?",(value, name))
-        
-        self.SQLconn.commit()
-        SQLcur.close()
+        setting = self.SQLSession.query(self.Settings).filter(self.Settings.name == name)
+        if setting:
+            setting.value = value
+        else:
+            s_i = self.conf_settings.insert()
+            s_i.execute(
+                { 'name': name, 'value': value }
+            )
+        self.SQLSession.flush()
                 
     def close(self):
         self.close_db()

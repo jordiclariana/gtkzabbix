@@ -177,7 +177,6 @@ class zbx_triggers:
             self.configuration = conf
         self.zbxConnections = zbx_connections(self.configuration)
         self.zbxConnections.init()
-        #self.fetch()
 
     def fetch(self):
         self.zbxConnections.recheck()
