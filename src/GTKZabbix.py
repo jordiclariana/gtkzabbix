@@ -125,6 +125,9 @@ class GTKZabbix:
         self.gstPlayer_bus.connect("message", self.gstplayer_on_message)
 
         self.list_zabbix_store.clear()
+        
+        self.isFullscreen = False
+        self.isControlRoomMode = False
 
         self.update_dashboard_thread = threading.Thread(target=self.update_dashboard)
         self.update_dashboard_thread.setDaemon(True)
@@ -140,9 +143,6 @@ class GTKZabbix:
         #gobject.timeout_add(30000, self.update_dashboard)
         #gobject.timeout_add(750, self.appind_blink)
         #gobject.timeout_add(750, self.priocolumn_blink)
-
-        self.isFullscreen = False
-        self.isControlRoomMode = False
 
         self.window.maximize()
         if self.conf_main.get_setting('showdashboardinit'):
