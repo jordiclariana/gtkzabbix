@@ -41,6 +41,35 @@ except Exception as e:
     print ("Error loading debugging modules: {0}".format(e))
     sys.exit(1)
 
+
+
+class MyDuckType(sqlalchemy.types.TypeDecorator):
+    """
+    SQLALchemy custom column type, designed to let sqlite handle the typing 
+    using 'numeric affinity' which intelligently handles both numbers and strings
+    """
+    impl = sqlalchemy.types.FLOAT
+
+    def bind_processor(self, dialect):
+        #function for type coercion during db write
+        return None #ie pass value as-is, let sqlite do the typing
+
+    def result_processor(self, dialect, coltype):
+        #function for type coercion during db read
+        return None #ie pass value as sqlite has stored it, should be ducktyped already
+
+    def process_bind_param(self, value, dialect):
+        #any changes to an individual value before store in DN
+        return value
+
+    def process_result_value(self, value, dialect):
+        #any changes to an individual value after retrieve from DB
+        return value
+
+    def copy(self):
+        #not quite sure what this is for
+        return MyDuckType()
+
 class configuration:
     
     __SERVERS = []
@@ -51,18 +80,18 @@ class configuration:
 
         __tablename__ = 'servers'
 
-        alias = sqlalchemy.Column(sqlalchemy.String, primary_key=True)
-        uri = sqlalchemy.Column(sqlalchemy.String)
-        username = sqlalchemy.Column(sqlalchemy.String)
-        password = sqlalchemy.Column(sqlalchemy.String)
-        enabled = sqlalchemy.Column(sqlalchemy.String)
+        alias = sqlalchemy.Column(MyDuckType, primary_key=True)
+        uri = sqlalchemy.Column(MyDuckType)
+        username = sqlalchemy.Column(MyDuckType)
+        password = sqlalchemy.Column(MyDuckType)
+        enabled = sqlalchemy.Column(MyDuckType)
         
     class Settings(Base):
         
         __tablename__ = 'settings'
 
-        name = sqlalchemy.Column(sqlalchemy.String, primary_key=True)
-        value = sqlalchemy.Column(sqlalchemy.Integer)
+        name = sqlalchemy.Column(MyDuckType, primary_key=True)
+        value = sqlalchemy.Column(MyDuckType)
 
     def __init__(self):
         self.defaultDBFile = os.path.expanduser('~') + "/.GTKZabbixNotify.sqlite"
@@ -206,14 +235,19 @@ class configuration:
         try:
             return len(self.get_servers(enabled = enabled))
         except Exception as e:
-            print "Exception in get_total_servers: ", e
+            print "Exception in configuration.get_total_servers: ", e
             return 0
         
     def get_setting(self, name):
         setting = self.SQLSession.query(self.Settings).filter(self.Settings.name == name)
         try:
-            return setting.one().value
-        except:
+            value = setting.one().value
+            if value.isdigit():
+                int(setting.one().value)
+            else:
+                return setting.one().value
+        except Exception as e:
+            print("Exception on configuration.get_settings: {0}".format(e))
             return None
         
     def set_setting(self, name, value):
