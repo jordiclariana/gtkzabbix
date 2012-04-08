@@ -33,8 +33,16 @@ except Exception as e:
 try:
     import gtk
     import gobject
-    import appindicator
     import pango
+except Exception as e:
+    print ("Error loading GTK modules: {0}".format(e))
+    sys.exit(1)
+
+try:
+    import appindicator
+    loaded_indicator = True
+except ImportError, ex:
+    loaded_indicator = False
 except Exception as e:
     print ("Error loading GTK modules: {0}".format(e))
     sys.exit(1)
@@ -134,14 +142,23 @@ class GTKZabbix:
 
         self.list_zabbix_store_ack.connect('toggled', self.ack_toggled_callback, self.list_zabbix_store)
 
-        # The indicator!
-        self.ind = appindicator.Indicator("Zabbix Notify",
-                                          "Zabbix Notify",
-                                           appindicator.CATEGORY_APPLICATION_STATUS)
-        self.ind.set_status(appindicator.STATUS_ACTIVE)
-        self.ind.set_icon(zbx_priorities().get_icon())
         self.menu_setup()
-        self.ind.set_menu(self.menu)
+
+        if loaded_indicator:
+            # The indicator!
+            self.ind = appindicator.Indicator("GTKZabbix",
+                                              "GTKZabbix Indicator",
+                                               appindicator.CATEGORY_APPLICATION_STATUS)
+            self.ind.set_status(appindicator.STATUS_ACTIVE)
+            self.ind.set_icon(zbx_priorities().get_icon())
+            self.ind.set_menu(self.menu)
+        else:
+            self.tray = gtk.StatusIcon()
+            self.tray.set_from_file(zbx_priorities().get_icon())
+            self.tray.set_visible(True)
+            self.tray.connect('popup-menu', self.tray_right_click_event)
+            self.tray.connect('activate', self.tray_left_click_event)
+            self.tray.set_tooltip('GTKZabbix')
 
         # GST Player instance
         self.gstPlayer = gst.element_factory_make("playbin2", "player")
@@ -297,6 +314,12 @@ class GTKZabbix:
         self.menu.append(self.ackall_item)
         self.menu.append(self.quit_item)
 
+    def tray_right_click_event(self, icon, button, time):
+        self.menu.popup(None, None, gtk.status_icon_position_menu, button, time, self.tray)
+    
+    def tray_left_click_event(self, data):
+        self.menu.popup(None, None, gtk.status_icon_position_menu, 1, gtk.get_current_event_time(), self.tray)
+
     def control_room_mode(self, widget, data = None):
         self.isControlRoomMode = not self.isControlRoomMode
 
@@ -331,22 +354,36 @@ class GTKZabbix:
             counter = 0
             if self.list_zabbix_store.get_value(iter, LISTZABBIX['ack']) == 0:
                 if self.blinkFlag:
-                    self.ind.set_icon(
-                        zbx_priorities(
-                            self.list_zabbix_store.get_max_priority()
-                        ).get_icon()
-                    )
-
+                    if loaded_indicator:
+                        self.ind.set_icon(
+                            zbx_priorities(
+                                self.list_zabbix_store.get_max_priority()
+                            ).get_icon()
+                        )
+                    else:
+                        self.tray.set_icon_from_file(
+                            zbx_priorities(
+                                self.list_zabbix_store.get_max_priority()
+                            ).get_icon()
+                        )
                 else:
-                    self.ind.set_icon(zbx_priorities().get_empty_icon())
+                    if loaded_indicator:
+                        self.ind.set_icon(zbx_priorities().get_empty_icon())
+                    else:
+                        self.tray.set_icon_from_file(zbx_priorities().get_empty_icon())
                     self.window.set_icon_from_file(zbx_priorities().get_empty_icon())
                 counter = counter + 1
                 break
             iter=self.list_zabbix_store.iter_next(iter)
         if counter == 0:
-            if self.ind.get_icon() != zbx_priorities().get_icon() :
-                self.ind.set_icon(zbx_priorities().get_icon())
-                self.window.set_icon_from_file(zbx_priorities().get_icon())
+            if loaded_indicator:
+                if self.ind.get_icon() != zbx_priorities().get_icon() :
+                    self.ind.set_icon(zbx_priorities().get_icon())
+                    self.window.set_icon_from_file(zbx_priorities().get_icon())
+            else:
+                if self.tray.get_icon_name() != zbx_priorities().get_icon() :
+                    self.tray.set_icon_from_file(zbx_priorities().get_icon())
+                    self.window.set_icon_from_file(zbx_priorities().get_icon())
         gtk.gdk.threads_leave()
 
     def priocolumn_blink(self):
