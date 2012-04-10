@@ -142,7 +142,7 @@ class GTKZabbix:
         self.gstPlayer_bus.connect("message", self.gstplayer_on_message)
 
         self.list_zabbix_store.clear()
-        
+
         self.isFullscreen = False
         self.isControlRoomMode = False
 
@@ -226,7 +226,7 @@ class GTKZabbix:
         # Get current triggers to compare with new ones in order to know if
         # they have to be added or if in the other hand they already are in the list
         iter = self.list_zabbix_store.get_iter_first()
-        
+
         if not iter and len(triggers)>0: # List is empty, adding all items
             for trigger in triggers:
                 self.append_zbx_trigger(trigger[1], trigger[0])
@@ -432,7 +432,7 @@ class GTKZabbix:
 
     def tray_right_click_event(self, icon, button, time):
         self.menu.popup(None, None, gtk.status_icon_position_menu, button, time, self.tray)
-    
+
     def tray_left_click_event(self, data):
         self.menu.popup(None, None, gtk.status_icon_position_menu, 1, gtk.get_current_event_time(), self.tray)
 
@@ -476,13 +476,13 @@ class GTKZabbix:
                         if loaded_indicator:
                             self.ind.set_icon(zbx_priorities(self.get_maxprio_zbx_triggers()).get_icon())
                         else:
-                            self.tray.set_icon_from_file(self.get_maxprio_zbx_triggers()).get_icon()
+                            self.tray.set_from_file(zbx_priorities(self.get_maxprio_zbx_triggers()).get_icon())
                         self.window.set_icon_from_file(zbx_priorities(self.get_maxprio_zbx_triggers()).get_icon())
                     else:
                         if loaded_indicator:
                             self.ind.set_icon(zbx_priorities().get_empty_icon())
                         else:
-                            self.tray.set_icon_from_file(zbx_priorities().get_empty_icon())
+                            self.tray.set_from_file(zbx_priorities().get_empty_icon())
                         self.window.set_icon_from_file(zbx_priorities().get_empty_icon())
                     counter = counter + 1
                     break
@@ -493,9 +493,8 @@ class GTKZabbix:
                         self.ind.set_icon(zbx_priorities().get_icon())
                         self.window.set_icon_from_file(zbx_priorities().get_icon())
                 else:
-                    if self.tray.get_icon_name() != zbx_priorities().get_icon():
-                        self.tray.set_icon_from_file(zbx_priorities().get_icon())
-                        self.window.set_icon_from_file(zbx_priorities().get_icon())
+                    self.tray.set_from_file(zbx_priorities().get_icon())
+                    self.window.set_icon_from_file(zbx_priorities().get_icon())
 
             gtk.gdk.threads_leave()
             time.sleep(0.75)
