@@ -165,7 +165,7 @@ class GTKZabbix:
         if self.conf_main.get_setting('showdashboardinit'):
             self.conf_main.close()
             del self.conf_main
-            self.window.present()
+            self.show_item.set_active(True)
 
     def keypress(self, widget, event = None):
         if event.keyval == gtk.keysyms.F11:
@@ -409,8 +409,8 @@ class GTKZabbix:
     def menu_setup(self):
         self.menu = gtk.Menu()
 
-        self.show_item = gtk.MenuItem("Show Dashboard")
-        self.show_item.connect("activate", self.show)
+        self.show_item = gtk.CheckMenuItem("Show Dashboard")
+        self.show_item.connect("toggled", self.show)
         self.show_item.show()
         self.crm_item = gtk.CheckMenuItem("Control Room Mode")
         self.crm_item.connect("activate", self.control_room_mode)
@@ -434,7 +434,7 @@ class GTKZabbix:
         self.menu.popup(None, None, gtk.status_icon_position_menu, button, time, self.tray)
 
     def tray_left_click_event(self, data):
-        self.menu.popup(None, None, gtk.status_icon_position_menu, 1, gtk.get_current_event_time(), self.tray)
+        self.show_item.set_active(not self.show_item.get_active())
 
     def control_room_mode(self, widget, data = None):
         self.isControlRoomMode = not self.isControlRoomMode
@@ -450,11 +450,14 @@ class GTKZabbix:
         model.set_value(iter, LISTZABBIX['ack'], not cell.get_active())
 
     def show(self, widget, data=None):
-        self.window.present()
+        if not self.show_item.get_active():
+            self.window.hide()
+        else:
+            self.window.present()
         return True
-
+        
     def hide(self, widget, data=None):
-        self.window.hide()
+        self.show_item.set_active(False)
         return True
 
     def quit(self, widget, data=None):
