@@ -178,7 +178,8 @@ class zbx_triggers:
                     {'active' : True,
                      'monitored': True,
                      'sortfield': 'lastchange',
-                     'filter': {'value': 1}}):
+                     'filter': {'value': 1},
+                     'skipDependent': False}):
                     
                     triggers_list.append(trigger.get('triggerid'))
         

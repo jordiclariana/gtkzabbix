@@ -320,8 +320,8 @@ class GTKZabbix:
                      'monitored': True,
                      'sortfield': 'lastchange',
                      'filter': {'value': 1},
-                     'withUnacknowledgedEvents': True}
-                    ):
+                     'withUnacknowledgedEvents': True,
+                     'skipDependent': False}):
 
                     triggers_list.append(trigger.get('triggerid'))
 
