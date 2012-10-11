@@ -47,11 +47,11 @@
   <object class="GtkListStore" id="listZabbix">
     <columns>
       <!-- column-name triggerid -->
-      <column type="guint"/>
+      <column type="gulong"/>
       <!-- column-name hostid -->
-      <column type="guint"/>
+      <column type="gulong"/>
       <!-- column-name lastchange -->
-      <column type="guint"/>
+      <column type="gulong"/>
       <!-- column-name priority -->
       <column type="guint"/>
       <!-- column-name host -->
