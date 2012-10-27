@@ -117,6 +117,7 @@ class GTKZabbix:
            'on_sb_fontsize_value_changed': self.change_fontsize,
            'on_sc_fontsize_value_changed': self.change_fontsize,
            'on_mainWindow_key_press_event': self.keypress,
+           'on_treeZabbix_button_press_event': self.on_click,
         }
 
         self.builder.connect_signals(self.events_dic)
@@ -176,6 +177,18 @@ class GTKZabbix:
 
         if self.conf_main.get_setting('showdashboardinit'):
             self.show_item.set_active(True)
+
+    def on_click(self, widget, event):
+        if event.button == 1 and event.type == gtk.gdk.BUTTON_PRESS:
+            myselection = widget.get_selection()
+            model, selection = myselection.get_selected()
+            if isinstance(selection, gtk.TreeIter):
+                # If click is not over a row, unselect everyrow.
+                x, y, mods = widget.get_bin_window().get_pointer()
+                if not widget.get_path_at_pos(x, y):
+                    myselection.unselect_all()
+    
+        return False
 
     def keypress(self, widget, event = None):
         if event.keyval == gtk.keysyms.F11:
