@@ -24,6 +24,7 @@ try:
     import time
     import subprocess
     import shlex
+    import Queue
 except Exception as e:
     print ("Error loading system modules: {0}".format(e))
     sys.exit(1)
@@ -92,7 +93,11 @@ LISTZABBIX = {
 class GTKZabbix:
 
     def __init__(self):
-        self.conf_main = configuration()
+        conf_in_q = Queue.Queue()
+        conf_out_q = Queue.Queue()
+
+        self.conf_main = configuration(conf_in_q, conf_out_q)
+        self.conf_main.start()
 
         filename = resource_path("resources/glade/main.glade").get()
         self.builder = gtk.Builder()
@@ -162,9 +167,13 @@ class GTKZabbix:
         #gobject.timeout_add(750, self.priocolumn_blink)
 
         self.window.maximize()
+
+        # Load last fontsize and set it
+        adj_fontsize = self.builder.get_object("adj_fontsize")
+        adj_fontsize.set_value(self.conf_main.get_setting('font'))
+        self.change_fontsize(None, None)
+
         if self.conf_main.get_setting('showdashboardinit'):
-            self.conf_main.close()
-            del self.conf_main
             self.show_item.set_active(True)
 
     def keypress(self, widget, event = None):
@@ -195,6 +204,9 @@ class GTKZabbix:
         while iter:
             self.list_zabbix_store.set_value(iter, LISTZABBIX['fontsize'], int(adj_fontsize.get_value())*1000)
             iter = self.list_zabbix_store.iter_next(iter)
+        
+        # Save the new font
+        self.conf_main.set_setting('font', adj_fontsize.get_value())
 
     def append_zbx_trigger(self, trigger, alias):
         adj_fontsize = self.builder.get_object("adj_fontsize")
@@ -292,8 +304,8 @@ class GTKZabbix:
             cur_isack = bool(self.list_zabbix_store.get_value(iter, LISTZABBIX['ack']))
             cur_timestamps = int(self.list_zabbix_store.get_value(iter, LISTZABBIX['lastchange']))
             diff_time = (time.time() - cur_timestamps)
-            if diff_time <= self.conf_threaded.get_setting('playsoundiftriggerlastchange') and cur_prio > max_prio \
-                and cur_isack == False and cur_prio >= self.conf_threaded.get_setting('playifprio'):
+            if diff_time <= self.conf_main.get_setting('playsoundiftriggerlastchange') and cur_prio > max_prio \
+                and cur_isack == False and cur_prio >= self.conf_main.get_setting('playifprio'):
                 max_prio = cur_prio
             iter = self.list_zabbix_store.iter_next(iter)
         return max_prio
@@ -313,6 +325,26 @@ class GTKZabbix:
         triggers = []
         self.zbxConnections.recheck()
         for zAPIAlias, zAPIConn in self.zbxConnections.connections():
+            if not zAPIConn.logged_in():
+                triggers.append([ zAPIAlias,
+                    {u'comments': u'',
+                     u'dep_level': u'0',
+                     u'description': u'Zabbix Server {0} is unreachable'.format(zAPIAlias),
+                     u'error': u'',
+                     u'expression': u'0',
+                     u'host': zAPIAlias,
+                     u'hostid': u'0',
+                     u'hosts': [{u'hostid': u'0'}],
+                     u'lastchange': u'0',
+                     u'priority': u'4',
+                     u'status': u'0',
+                     u'templateid': u'0',
+                     u'triggerid': u'0',
+                     u'type': u'0',
+                     u'url': u'',
+                     u'value': u'1'}
+                ])
+                continue
             triggers_list = []
             try:
                 for trigger in zAPIConn.trigger.get(
@@ -340,15 +372,13 @@ class GTKZabbix:
                         triggers.append([ zAPIAlias, trigger ])
                 else:
                     print ("Error parsing triggers. Not dict and not list. Is: {0}".format(type(this_trigger)))
-
             except Exception as e:
                 print ("GTKZabbix | Unexpected error getting triggers from {0}:\n\t{1}".format(zAPIAlias, e))
 
         return triggers
 
     def update_dashboard(self, once = False):
-        self.conf_threaded = configuration()
-        self.zbxConnections = zbx_connections(self.conf_threaded)
+        self.zbxConnections = zbx_connections(self.conf_main)
         self.zbxConnections.init()
         first = True
         no_triggers_timestamp = None
@@ -364,7 +394,7 @@ class GTKZabbix:
             if first:
                 first = False
                 self.list_zabbix_store.set_sort_column_id(2, gtk.SORT_DESCENDING)
-                if self.conf_threaded.get_setting('ackalloninit'):
+                if self.conf_main.get_setting('ackalloninit'):
                     try:
                         self.ackall(None)
                     except Exception as e:
@@ -374,14 +404,14 @@ class GTKZabbix:
             except Exception as e:
                 print ("GTKZabbixNotify | Exception deleting triggers:\n\t{0}".format(e))
 
-            self.auto_ack(self.conf_threaded.get_setting('ackafterseconds'))
+            self.auto_ack(self.conf_main.get_setting('ackafterseconds'))
             max_prio = self.get_play_alarm_priority()
             self.lbl_lastupdated_num.set_text(datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
             # Leaving dangerous section
             gtk.gdk.threads_leave()
 
             # Play sound if we have delete triggers (and if is it set to do so)
-            if deleted and self.conf_threaded.get_setting('sounddelete'):
+            if deleted and self.conf_main.get_setting('sounddelete'):
                 self.play_sound(-1)
                 if max_prio >= 0:
                     time.sleep(0.75)
@@ -403,8 +433,7 @@ class GTKZabbix:
             if once:
                 break
             # self.notify.notify(4, "Server Name", "Trigger description")
-            time.sleep(self.conf_threaded.get_setting('checkinterval'))
-        self.conf_threaded.close()
+            time.sleep(self.conf_main.get_setting('checkinterval'))
 
     def menu_setup(self):
         self.menu = gtk.Menu()
@@ -461,6 +490,7 @@ class GTKZabbix:
         return True
 
     def quit(self, widget, data=None):
+        self.conf_main.stop()
         print ("Quit!")
         gtk.main_quit()
 
@@ -534,7 +564,7 @@ class GTKZabbix:
             time.sleep(0.75)
 
     def play_sound(self, priority):
-        if self.conf_threaded.get_setting('soundenable'):
+        if self.conf_main.get_setting('soundenable'):
             uri = 'file://' + zbx_priorities(priority).get_sound()
             self.gstPlayer.set_property('uri', uri)
             self.gstPlayer.set_state(gst.STATE_PLAYING)
@@ -576,4 +606,7 @@ class GTKZabbix:
 if __name__ == '__main__':
     gtk.gdk.threads_init()
     app = GTKZabbix()
-    gtk.main()
+    try:
+        gtk.main()
+    except KeyboardInterrupt:
+        app.conf_main.stop()

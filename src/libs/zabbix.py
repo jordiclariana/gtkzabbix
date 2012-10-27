@@ -18,6 +18,7 @@
 # System modules
 try:
     import sys
+    import Queue
 except Exception as e:
     print ("Error loading system modules: {0}".format(e))
     sys.exit(1)
@@ -87,7 +88,10 @@ class zbx_connections:
     def __init__(self, conf = None):
         self.zAPIs = {}
         if not conf:
-            self.configuration = configuration()
+            conf_in_q = Queue.Queue()
+            conf_out_q = Queue.Queue()
+            self.configuration = configuration(conf_in_q, conf_out_q)
+            self.configuration.start()
         else:
             self.configuration = conf 
 
@@ -95,7 +99,7 @@ class zbx_connections:
         for zapiID in range(0, self.configuration.get_total_servers()):
             if self.configuration.get_server(zapiID, 'enabled') == True:
                 alias = self.configuration.get_server(zapiID, 'alias')
-                self.zAPIs[alias] = ZabbixAPI(server=self.configuration.get_server(zapiID, 'uri'),log_level=0)
+                self.zAPIs[alias] = ZabbixAPI(server=self.configuration.get_server(zapiID, 'uri'), log_level=0, timeout=5)
                 try:
                     self.zAPIs[alias].login(self.configuration.get_server(zapiID, 'username'), 
                                              self.configuration.get_password(self.configuration.get_server(zapiID, 'password')))
@@ -117,7 +121,7 @@ class zbx_connections:
             if self.configuration.get_server(zapiID, 'enabled') == True:
                 alias = self.configuration.get_server(zapiID, 'alias')
                 if not self.zAPIs.has_key(alias): # New server
-                    self.zAPIs[alias] = ZabbixAPI(server=self.configuration.get_server(zapiID, 'uri'),log_level=0)
+                    self.zAPIs[alias] = ZabbixAPI(server=self.configuration.get_server(zapiID, 'uri'), log_level=0, timeout=5)
                     try:
                         self.zAPIs[alias].login(self.configuration.get_server(zapiID, 'username'), 
                                                  self.configuration.get_password(self.configuration.get_server(zapiID, 'password')))

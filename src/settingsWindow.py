@@ -15,6 +15,13 @@
 #   You should have received a copy of the GNU General Public License
 #   along with GTKZabbix.  If not, see <http://www.gnu.org/licenses/>.
 
+# System modules
+try:
+    import Queue
+except Exception as e:
+    print ("Error loading system modules: {0}".format(e))
+    sys.exit(1)
+
 # GTK modules
 try:
     import gtk
@@ -88,7 +95,11 @@ class settingsWindow:
 
         self.settingsBuilder.connect_signals(self.events_dic)
         
-        self.conf = configuration()
+        conf_in_q = Queue.Queue()
+        conf_out_q = Queue.Queue()
+
+        self.conf = configuration(conf_in_q, conf_out_q)
+        self.conf.start()
         
         self.fill_settings_objects()
         self.fill_servers_list()
@@ -148,9 +159,11 @@ class settingsWindow:
                 print "Exception: ", e
                 print "Setting object: ".format(type(setting_obj))
 
+        self.conf.stop()
         self.settingsWindow.destroy()
 
     def cancel(self, widget, data = None):
+        self.conf.stop()
         self.settingsWindow.destroy()
 
     def server_field_changed(self, widget, data = None):
