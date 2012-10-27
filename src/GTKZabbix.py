@@ -54,9 +54,10 @@ except Exception as e:
     print ("Error loading audio modules: {0}".format(e))
     sys.exit(1)
 
+from libs.configuration import configuration
 # Custom modules
 try:
-    from libs.configuration import configuration
+    #from libs.configuration import configuration
     from libs.zabbix_api import ZabbixAPI, ZabbixAPIException
     from libs.zabbix import zbx_connections, zbx_priorities, zbx_connections, resource_path
     from settingsWindow import settingsWindow

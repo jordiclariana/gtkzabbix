@@ -40,18 +40,17 @@ except Exception as e:
     print ("Error loading debugging modules: {0}".format(e))
     sys.exit(1)
 
-class configuration(threading.Thread):
-
-    __SERVERS_COLUMNS={'alias': 0, 'uri': 1, 'username': 2, 'password': 3, 'enabled': 4}
-    __SERVERS = []
+class confthread(threading.Thread):
 
     def __init__(self, conf_in_q, conf_out_q):
-        super(configuration, self).__init__()
+        super(confthread, self).__init__()
         self.conf_in_q = conf_in_q
         self.conf_out_q = conf_out_q
         self.stoprequest = threading.Event()
         self.lock = threading.Lock()
-        self.defaultDBFile = os.path.expanduser('~') + "/.GTKZabbixNotify.sqlite"
+
+        self.SERVERS_COLUMNS={'alias': 0, 'uri': 1, 'username': 2, 'password': 3, 'enabled': 4}
+        self.SERVERS = []
 
     def run(self):
         self.db_init()
@@ -108,7 +107,7 @@ class configuration(threading.Thread):
 
     def stop(self, timeout=None):
         self.stoprequest.set()
-        super(configuration, self).join(timeout)
+        super(confthread, self).join(timeout)
 
     def set_password(self, raw_password):
         return(base64.b64encode(raw_password))
@@ -147,108 +146,84 @@ class configuration(threading.Thread):
                         server['enabled'] == enabled):
                     self.__mod_server__(alias=alias, uri=uri, username=username, password=self.set_password(password), enabled=enabled)
 
-    def set_server(self, alias, uri, username, password, enabled):
-        self.conf_in_q.put(["__set_server__", {"alias": alias, "uri": uri, "username": username, "password": password, "enabled": enabled }])
-        return self.conf_out_q.get()
-
     def __mod_server__(self, *args, **kwargs):
+        alias = kwargs["alias"]
+        uri = kwargs["uri"]
+        username = kwargs["username"]
+        password = kwargs["password"]
+        enabled = kwargs["enabled"]
+
         return self.persistent_db_cursor.execute("UPDATE servers SET uri=?, username=?, password=?, enabled=? WHERE alias=?",
-                             (kwargs["uri"], kwargs["username"], kwargs["password"], kwargs["enabled"], kwargs["alias"]))
+                             (uri, username, password, enabled, alias))
     
-    def mod_server(self, alias, uri, username, password, enabled):
-        self.conf_in_q.put(["__mod_server__", {"alias": alias, "uri": uri, "username": username, "password": password, "enabled": enabled }])
-        return self.conf_out_q.get()
-
     def __del_server__(self, *args, **kwargs):
-        return self.persistent_db_cursor.execute("DELETE FROM servers WHERE alias=?", (kwargs["alias"],))
+        alias = kwargs["alias"]
 
-    def del_server(self, alias):
-        self.conf_in_q.put(["__del_server__", {"alias": alias }])
-        return self.conf_out_q.get()
+        return self.persistent_db_cursor.execute("DELETE FROM servers WHERE alias=?", (alias,))
 
     def __get_servers__(self, *args, **kwargs):
+        alias = kwargs["alias"]
+        enabled = kwargs["enabled"]
+
         servers = []
         self.__fetch_servers__()
-        for server in self.__SERVERS:
-            if kwargs["alias"] != None and server['alias'] == kwargs["alias"]:
-                if kwargs["enabled"] != None and server['enabled'] == kwargs["enabled"]:
+        for server in self.SERVERS:
+            if alias != None and server['alias'] == alias:
+                if enabled != None and server['enabled'] == enabled:
                     servers.append(server)
                 else:
                     servers.append(server)
-            elif kwargs["enabled"] != None and server['enabled'] == kwargs["enabled"]:
+            elif enabled != None and server['enabled'] == enabled:
                 servers.append(server)
-            elif kwargs["alias"] == None and kwargs["enabled"] == None:
+            elif alias == None and enabled == None:
                 servers.append(server)
 
         return servers
 
-    def get_servers(self, alias = None, enabled = None):
-        self.conf_in_q.put(["__get_servers__", { "alias": alias, "enabled": enabled }])
-        return self.conf_out_q.get()
-
     def __fetch_servers__(self, *args, **kwargs):
         self.persistent_db_cursor.execute("SELECT * FROM servers")
 
-        self.__SERVERS = []
+        self.SERVERS = []
         for server in self.persistent_db_cursor.fetchall():
-            self.__SERVERS.append({'alias': server[self.__SERVERS_COLUMNS['alias']],
-                                                                       'uri': server[self.__SERVERS_COLUMNS['uri']],
-                                                                       'username': server[self.__SERVERS_COLUMNS['username']], 
-                                                                       'password': server[self.__SERVERS_COLUMNS['password']], 
-                                                                       'enabled': server[self.__SERVERS_COLUMNS['enabled']]}
+            self.SERVERS.append({'alias': server[self.SERVERS_COLUMNS['alias']],
+                                                                       'uri': server[self.SERVERS_COLUMNS['uri']],
+                                                                       'username': server[self.SERVERS_COLUMNS['username']], 
+                                                                       'password': server[self.SERVERS_COLUMNS['password']], 
+                                                                       'enabled': server[self.SERVERS_COLUMNS['enabled']]}
                                                                        )
-
-    def fetch_servers(self):
-        self.conf_in_q.put(["__fetch_servers__", { "None": None } ])
-        return self.conf_out_q.get()
-        
-    def get_server(self, id, column):
-        if id in range(0, len(self.__SERVERS)):
-            return self.__SERVERS[id][column]
-        else:
-            return False
 
     def __get_total_servers__(self, *args, **kwargs):
         enabled = kwargs["enabled"]
 
         try:
-            return len(self.__get_servers__(alias=None, enabled=enabled))
+            return len( self.__get_servers__(alias=None, enabled=enabled) )
         except Exception as e:
             print "Exception in get_total_servers: ", e
             return 0
 
-    def get_total_servers(self, enabled = None):
-        self.conf_in_q.put(["__get_total_servers__", { "enabled": enabled } ])
-        return self.conf_out_q.get()
-
     def __get_setting__(self, *args, **kwargs):
-        self.persistent_db_cursor.execute("SELECT value FROM settings WHERE name=?", (kwargs["name"],))
+        name = kwargs["name"]
+        self.persistent_db_cursor.execute("SELECT value FROM settings WHERE name=?", (name,))
         value = self.persistent_db_cursor.fetchall()
         if len(value) > 0 and len(value[0]) > 0:
             return value[0][0]
         else:
             return None
 
-
     def __set_setting__(self, *args, **kwargs):
+        name = kwargs["name"]
+        value = kwargs["value"]
+
         try:
-            self.persistent_db_cursor.execute("SELECT value FROM settings WHERE name=?", (kwargs["name"],))
+            self.persistent_db_cursor.execute("SELECT value FROM settings WHERE name=?", (name,))
             settings = self.persistent_db_cursor.fetchall()
             if len(settings) == 0:
-                self.persistent_db_cursor.execute("INSERT INTO settings VALUES (?,?)", (kwargs["name"], kwargs["value"], ))
-            elif settings[0][0] != kwargs["value"]:
-                self.persistent_db_cursor.execute("UPDATE settings SET value=? WHERE name=?",(kwargs["value"], kwargs["name"], ))
+                self.persistent_db_cursor.execute("INSERT INTO settings VALUES (?,?)", (name, value, ))
+            elif settings[0][0] != value:
+                self.persistent_db_cursor.execute("UPDATE settings SET value=? WHERE name=?",(value, name, ))
             else:
                 return True
             self.persistent_db.commit()
             return True
         except:
             return False
-
-    def get_setting(self, name):
-        self.conf_in_q.put(["__get_setting__", {"name": name }])
-        return self.conf_out_q.get()
-
-    def set_setting(self, name, value):
-        self.conf_in_q.put(["__set_setting__", {"name": name, "value": value}])
-        return self.conf_out_q.get()
