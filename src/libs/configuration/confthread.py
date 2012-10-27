@@ -43,14 +43,12 @@ except Exception as e:
 class confthread(threading.Thread):
 
     def __init__(self, conf_in_q, conf_out_q):
+        # Setup queues and threading
         super(confthread, self).__init__()
         self.conf_in_q = conf_in_q
         self.conf_out_q = conf_out_q
         self.stoprequest = threading.Event()
         self.lock = threading.Lock()
-
-        self.SERVERS_COLUMNS={'alias': 0, 'uri': 1, 'username': 2, 'password': 3, 'enabled': 4}
-        self.SERVERS = []
 
     def run(self):
         self.db_init()

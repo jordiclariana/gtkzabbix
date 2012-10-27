@@ -31,10 +31,24 @@ except Exception as e:
 
 class configuration(confthread.confthread):
 
-    def __init__(self, conf_in_q, conf_out_q):
-        super(configuration, self).__init__(conf_in_q, conf_out_q)
-        self.defaultDBFile = os.path.expanduser('~') + "/.GTKZabbixNotify.sqlite"
+    OLDCONFIG=os.path.expanduser('~') + "/.GTKZabbixNotify.sqlite"
+    NEWCONFIG=os.path.expanduser('~') + "/.GTKZabbix.sqlite"
+    SERVERS_COLUMNS={'alias': 0, 'uri': 1, 'username': 2, 'password': 3, 'enabled': 4}
+    SERVERS = []
 
+    def __init__(self, conf_in_q, conf_out_q):
+        # Little config file migration :P
+        if os.path.isfile(self.OLDCONFIG) and not os.path.isfile(self.NEWCONFIG):
+            os.rename(self.OLDCONFIG, self.NEWCONFIG)
+            print("Config file migrated from {0} to {1}".format(self.OLDCONFIG, self.NEWCONFIG))
+
+        # Set config file
+        self.defaultDBFile = self.NEWCONFIG
+
+        # inherit confthread class
+        super(configuration, self).__init__(conf_in_q, conf_out_q)
+
+    # confthread methods wrappers
     def set_server(self, alias, uri, username, password, enabled):
         self.conf_in_q.put(["__set_server__", {"alias": alias, "uri": uri, "username": username, "password": password, "enabled": enabled }])
         return self.conf_out_q.get()
@@ -54,13 +68,7 @@ class configuration(confthread.confthread):
     def fetch_servers(self):
         self.conf_in_q.put(["__fetch_servers__", { "None": None } ])
         return self.conf_out_q.get()
-        
-    def get_server(self, id, column):
-        if id in range(0, len(self.SERVERS)):
-            return self.SERVERS[id][column]
-        else:
-            return False
-
+    
     def get_total_servers(self, enabled = None):
         self.conf_in_q.put(["__get_total_servers__", { "enabled": enabled } ])
         return self.conf_out_q.get()
@@ -72,3 +80,10 @@ class configuration(confthread.confthread):
     def set_setting(self, name, value):
         self.conf_in_q.put(["__set_setting__", {"name": name, "value": value}])
         return self.conf_out_q.get()
+
+    # This is no wrapper, no need to
+    def get_server(self, id, column):
+        if id in range(0, len(self.SERVERS)):
+            return self.SERVERS[id][column]
+        else:
+            return False

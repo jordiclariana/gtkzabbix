@@ -170,13 +170,14 @@ class GTKZabbix:
 
         self.window.maximize()
 
-        # Load last fontsize and set it
+        # Load last fontsize
         adj_fontsize = self.builder.get_object("adj_fontsize")
-        adj_fontsize.set_value(self.conf_main.get_setting('font'))
-        self.change_fontsize(None, None)
 
         if self.conf_main.get_setting('showdashboardinit'):
             self.show_item.set_active(True)
+
+        adj_fontsize.set_value(self.conf_main.get_setting('font'))
+        self.change_fontsize(None, None)
 
     def on_click(self, widget, event):
         if event.button == 1 and event.type == gtk.gdk.BUTTON_PRESS:
