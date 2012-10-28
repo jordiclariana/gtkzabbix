@@ -158,8 +158,6 @@ class GTKZabbix:
 
         self.list_zabbix_store.clear()
 
-        self.triggers = zbx_triggers(self.conf_main)
-
         self.isFullscreen = False
         self.isControlRoomMode = False
 
@@ -412,6 +410,9 @@ class GTKZabbix:
         self.zbxConnections.init()
         first = True
         no_triggers_timestamp = None
+
+        self.triggers = zbx_triggers(self.conf_main)
+
         while True:
             print ("{0} | Updating dashboard".format(datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')))
             self.triggers.fetch()
