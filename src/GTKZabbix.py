@@ -59,7 +59,8 @@ from libs.configuration import configuration
 try:
     #from libs.configuration import configuration
     from libs.zabbix_api import ZabbixAPI, ZabbixAPIException
-    from libs.zabbix import zbx_connections, zbx_priorities, zbx_connections, resource_path
+    from libs.zabbix import zbx_connections, zbx_priorities, zbx_connections, resource_path, zbx_triggers
+    from libs.views import zbx_listview, zbx_groupview
     from settingsWindow import settingsWindow
     #import notify
 except Exception as e:
@@ -106,7 +107,13 @@ class GTKZabbix:
 
         self.window = self.builder.get_object("mainWindow")
         self.list_zabbix_model = self.builder.get_object("treeZabbix")
-        self.list_zabbix_store = self.builder.get_object("listZabbix")
+        self.list_zabbix_store = zbx_listview(self.list_zabbix_model)
+        self.list_zabbix_model.set_model(self.list_zabbix_store)
+
+        self.group_zabbix_model = self.builder.get_object("treeZabbixGroup")
+        self.group_zabbix_store = zbx_groupview(self.group_zabbix_model)
+        self.group_zabbix_model.set_model(self.group_zabbix_store)
+
         self.list_zabbix_store_ack = self.builder.get_object("crt_ack")
         self.lbl_lastupdated_num = self.builder.get_object("lbl_lastupdated_num")
 
@@ -118,6 +125,7 @@ class GTKZabbix:
            'on_sc_fontsize_value_changed': self.change_fontsize,
            'on_mainWindow_key_press_event': self.keypress,
            'on_treeZabbix_button_press_event': self.on_click,
+           'on_treeZabbixGroup_button_press_event': self.on_click,
         }
 
         self.builder.connect_signals(self.events_dic)
@@ -149,6 +157,8 @@ class GTKZabbix:
         self.gstPlayer_bus.connect("message", self.gstplayer_on_message)
 
         self.list_zabbix_store.clear()
+
+        self.triggers = zbx_triggers(self.conf_main)
 
         self.isFullscreen = False
         self.isControlRoomMode = False
@@ -207,7 +217,14 @@ class GTKZabbix:
                           'lbl_tv_host',
                           'lbl_tv_description',
                           'lbl_tv_lastchange',
-                          'lbl_lastupdated' ]
+                          'lbl_lastupdated',
+                          'lbl_hostgroup',
+                          'lbl_disaster',
+                          'lbl_high',
+                          'lbl_average',
+                          'lbl_warning',
+                          'lbl_information',
+                          'lbl_notclassified' ]
 
         adj_fontsize = self.builder.get_object("adj_fontsize")
         for col_label in column_labels:
@@ -215,10 +232,8 @@ class GTKZabbix:
             column_label_object.modify_font(pango.FontDescription(str(adj_fontsize.get_value())))
         self.lbl_lastupdated_num.modify_font(pango.FontDescription(str(adj_fontsize.get_value())))
 
-        iter = self.list_zabbix_store.get_iter_first()
-        while iter:
-            self.list_zabbix_store.set_value(iter, LISTZABBIX['fontsize'], int(adj_fontsize.get_value())*1000)
-            iter = self.list_zabbix_store.iter_next(iter)
+        self.list_zabbix_store.change_fontsize(int(adj_fontsize.get_value())*1000)
+        self.group_zabbix_store.change_fontsize(int(adj_fontsize.get_value())*1000)
         
         # Save the new font
         self.conf_main.set_setting('font', adj_fontsize.get_value())
@@ -399,13 +414,18 @@ class GTKZabbix:
         no_triggers_timestamp = None
         while True:
             print ("{0} | Updating dashboard".format(datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')))
-            triggers = self.get_zbx_triggers()
+            self.triggers.fetch()
+
             # Set threads_enter because we are going to change widgets properties on the wild using several threads.
             gtk.gdk.threads_enter()
             try:
-                self.add_zbx_triggers(triggers)
+                if self.triggers.count() > 0:
+                    self.group_zabbix_store.add_triggers(self.triggers)
+                    self.list_zabbix_store.add_triggers(self.triggers)
+                    self.crm_change_display(True)
             except Exception as e:
                 print ("GTKZabbixNotify | Exception adding triggers:\n\t{0}".format(e))
+
             if first:
                 first = False
                 self.list_zabbix_store.set_sort_column_id(2, gtk.SORT_DESCENDING)
@@ -415,12 +435,15 @@ class GTKZabbix:
                     except Exception as e:
                         print ("GTKZabbixNotify | Exception ACKing triggers:\n\t{0}".format(e))
             try:
-                deleted = self.del_zbx_triggers(triggers)
+                deleted = self.list_zabbix_store.del_triggers(self.triggers)
             except Exception as e:
                 print ("GTKZabbixNotify | Exception deleting triggers:\n\t{0}".format(e))
 
-            self.auto_ack(self.conf_main.get_setting('ackafterseconds'))
-            max_prio = self.get_play_alarm_priority()
+            self.list_zabbix_store.auto_ack(self.conf_main.get_setting('ackafterseconds'))
+            max_prio = self.list_zabbix_store.get_play_alarm_priority(
+                self.conf_main.get_setting('playsoundiftriggerlastchange'),
+                self.conf_main.get_setting('playifprio'))
+
             self.lbl_lastupdated_num.set_text(datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
             # Leaving dangerous section
             gtk.gdk.threads_leave()
@@ -436,7 +459,7 @@ class GTKZabbix:
                 self.play_sound(max_prio)
 
             # Control Room Mode
-            if len(triggers) == 0 and self.isControlRoomMode:
+            if self.triggers.count() == 0 and self.isControlRoomMode:
                 if not no_triggers_timestamp:
                     no_triggers_timestamp = time.time()
                 if time.time() > (no_triggers_timestamp + 300):
@@ -484,11 +507,8 @@ class GTKZabbix:
         self.isControlRoomMode = not self.isControlRoomMode
 
     def ackall(self, widget, data = None):
-        iter = self.list_zabbix_store.get_iter_first()
-        while iter:
-            self.list_zabbix_store.set_value(iter, LISTZABBIX['ack'], 1)
-            iter = self.list_zabbix_store.iter_next(iter)
-
+        self.list_zabbix_store.ackall()
+        
     def ack_toggled_callback(self, cell, path, model=None):
         iter = model.get_iter(path)
         model.set_value(iter, LISTZABBIX['ack'], not cell.get_active())

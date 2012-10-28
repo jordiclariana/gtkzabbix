@@ -41,6 +41,7 @@ except Exception as e:
 
 class zbx_priorities:
     __priorities = [ 'Not classified', 'Informational', 'Warning', 'Average' ,'High', 'Disaster' ]
+    __priority_keys = [ 'notclassified', 'information', 'warning', 'average', 'high', 'disaster' ]
     __priorities_color_bg = [ '#00FF00', '#00FF00', '#FFFF00', '#FF8C00', '#FF0000', '#D02090' ]
     __priorities_color_fg = [ '#000000', '#000000', '#000000', '#000000', '#FFFFFF', '#FFFFFF' ]
     __priorities_not_color_fg = [ '#000000', '#000000', '#000000', '#000000', '#000000', '#000000' ]
@@ -52,7 +53,10 @@ class zbx_priorities:
     __empty_icon = 'empty.png'
 
     def __init__(self, priority = -1):
-        self.__PRIORITY = int(priority)
+        if priority in range(-1, len(self.__priorities)):
+            self.__PRIORITY = int(priority)
+        else:
+            raise Exception, "Wrong priority index"
     
     def get_text(self):
         return self.__priorities[self.__PRIORITY]
@@ -83,6 +87,12 @@ class zbx_priorities:
             return resource_path("resources/audio/{0}".format(self.__priorities_sound[self.__PRIORITY])).get()
         else:
             return resource_path("resources/audio/{0}".format(self.__priorities_sound_off)).get()
+    
+    def get_key(self):
+        if self.__PRIORITY >= 0:
+            return self.__priority_keys[self.__PRIORITY]
+        else:
+            return self.__priority_keys[0]
 
 class zbx_connections:
     def __init__(self, conf = None):
@@ -183,8 +193,8 @@ class zbx_triggers:
                      'monitored': True,
                      'sortfield': 'lastchange',
                      'filter': {'value': 1},
-                     'skipDependent': False}):
-                    
+                     'skipDependent': True,
+                     'withUnacknowledgedEvents': False}):
                     triggers_list.append(trigger.get('triggerid'))
         
                 this_trigger = zAPIConn.trigger.get(
@@ -206,9 +216,17 @@ class zbx_triggers:
             except Exception as e:
                 print ("zbx_triggers | Unexpected error getting triggers from {0}:\n\t{1}".format(zAPIAlias, e))
     
-    def set_trigger(self, value):
-        self.__TRIGGERS.append(value)
-    
+    def set_trigger(self, trigger):
+        lookedup_trigger = self.search_trigger(trigger.get_id(), trigger.get_serveralias())
+        if lookedup_trigger:
+            if lookedup_trigger.get_lastchange() != trigger.get_lastchange():
+                self.del_trigger(trigger.get_id(), trigger.get_lastchange())
+            else:
+                return False
+
+        self.__TRIGGERS.append(trigger)
+        return True
+
     def get_trigger(self, triggerid):
         for trigger in self.__TRIGGERS:
             if trigger.get_id() == int(triggerid):
@@ -245,7 +263,23 @@ class zbx_triggers:
             return False
 
         return new_trigger
-    
+
+    def search_trigger(self, id, serveralias):
+        for trigger in self.get_triggers():
+            if trigger.get_id() == id and trigger.get_serveralias() == serveralias:
+                return trigger
+        return False
+
+    def del_trigger(self, id, serveralias):
+        new_triggers = []
+        for trigger in self.get_triggers():
+            if trigger.get_id() != id and trigger.get_serveralias() != serveralias:
+                new_triggers.append(trigger)
+        self.__TRIGGERS = new_triggers
+
+    def count(self):
+        return len(self.__TRIGGERS)
+
     TRIGGERS = property(get_trigger, set_trigger, None, None)
     
 class zbx_trigger:
@@ -278,6 +312,14 @@ class zbx_trigger:
     def get_description(self):
         return self.__DESCRIPTION
 
+    def get_group(self):
+        for group in self.__GROUPS:
+            if group:
+                yield group
+            else:
+                yield False
+        return
+
     def get_groups(self):
         return self.__GROUPS
 
@@ -303,7 +345,8 @@ class zbx_trigger:
         self.__DESCRIPTION = value
 
     def set_groups(self, value):
-        self.__GROUPS.append(value)
+        for key, group in value.iteritems():
+            self.__GROUPS.append(group)
 
     def set_serveralias(self, value):
         self.__SERVERALIAS = value
