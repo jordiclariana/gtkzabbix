@@ -184,6 +184,8 @@ class zbx_triggers:
 
     def fetch(self):
         self.zbxConnections.recheck()
+        self.__TRIGGERS = []
+
         for zAPIAlias, zAPIConn in self.zbxConnections.connections():
             triggers_list = []
             try:
@@ -219,7 +221,7 @@ class zbx_triggers:
         lookedup_trigger = self.search_trigger(trigger.get_id(), trigger.get_serveralias())
         if lookedup_trigger:
             if lookedup_trigger.get_lastchange() != trigger.get_lastchange():
-                self.del_trigger(trigger.get_id(), trigger.get_lastchange())
+                self.del_trigger(trigger.get_id(), trigger.get_serveralias())
             else:
                 return False
 
