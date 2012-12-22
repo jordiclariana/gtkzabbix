@@ -173,6 +173,9 @@ class zbx_listview(gtk.ListStore, zbx_fontsize):
                         iter = self.get_iter_first()
                         break
                     iter = self.iter_next(iter)
+                if not found:
+                    self.append_trigger(trigger)
+                iter = self.get_iter_first()
 
     def del_triggers(self, triggers):
         # Cleanup
