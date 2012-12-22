@@ -71,6 +71,8 @@ class settingsWindow:
         self.ls_priorities_notify = self.settingsBuilder.get_object("ls_priorities_notify")
         self.cb_enablenotify = self.settingsBuilder.get_object("cb_enablenotify")
         self.box_notify = self.settingsBuilder.get_object("box_notify")
+        self.cb_enablegtkserver = self.settingsBuilder.get_object("cb_enablegtkserver")
+        self.box_gtkzabbixserver = self.settingsBuilder.get_object("box_gtkzabbixserver")
         self.serversWindow = self.settingsBuilder.get_object("serversWindow")
         
         self.settings_object_list = {}
@@ -93,6 +95,7 @@ class settingsWindow:
            'on_bt_editserver_clicked': self.server_edit,
            'on_bt_servers_save_clicked': self.servers_save,
            'on_bt_servers_cancel_clicked': self.servers_cancel,
+           'on_cb_enablegtkserver_toggled': self.enablegtkserver_changes,
         }
 
         self.settingsBuilder.connect_signals(self.events_dic)
@@ -236,6 +239,9 @@ class settingsWindow:
     def enablenotify_changes(self, widget, data = None):
         self.box_notify.set_sensitive(widget.get_active())
         
+    def enablegtkserver_changes(self, widget, data = None):
+        self.box_gtkzabbixserver.set_sensitive(widget.get_active())
+
     def server_clicked(self, widget, event = None):
         x = int(event.x)
         y = int(event.y)
