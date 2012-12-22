@@ -32,7 +32,11 @@ except Exception as e:
 class resource_path:
     def __init__(self, rel_path):
         dir_of_py_file = os.path.dirname(__file__)
-        rel_path_to_resource = os.path.join(dir_of_py_file[0:dir_of_py_file.find("libs")], rel_path)
+        # print("dir_of_py_file:")
+        # pprint(dir_of_py_file)
+        rel_path_to_resource = os.path.join(dir_of_py_file[0:dir_of_py_file.find("misc")], rel_path)
+        # print("rel_path_to_resource")
+        # pprint(rel_path_to_resource)
         self.abs_path_to_resource = os.path.abspath(rel_path_to_resource)
     
     def get(self):

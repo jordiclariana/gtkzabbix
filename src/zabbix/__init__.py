@@ -25,8 +25,8 @@ except Exception as e:
 
 # Custom modules
 try:
-    from resource_path import resource_path
-    from zabbix_api import ZabbixAPI, ZabbixAPIException
+    from misc import resource_path
+    from zabbix.api import ZabbixAPI, ZabbixAPIException
     from configuration import configuration
 except Exception as e:
     print ("Error loading custom modules: {0}".format(e))
@@ -106,6 +106,9 @@ class zbx_connections:
             self.configuration = conf 
 
     def init(self):
+        if self.configuration.get_total_servers() == 0:
+            return True
+            
         for zapiID in range(0, self.configuration.get_total_servers()):
             if self.configuration.get_server(zapiID, 'enabled') == True:
                 alias = self.configuration.get_server(zapiID, 'alias')
@@ -126,6 +129,9 @@ class zbx_connections:
             return None
 
     def recheck(self):
+        if self.configuration.get_total_servers() == 0:
+            return True
+         
         for zapiID in range(0, self.configuration.get_total_servers()):
             alias = self.configuration.get_server(zapiID, 'alias')
             if self.configuration.get_server(zapiID, 'enabled') == True:
@@ -240,6 +246,9 @@ class zbx_triggers:
                 yield False
         return
     
+    def get_all_triggers(self):
+        return self.__TRIGGERS
+
     def new_trigger(self, serveralias, trigger, groups):
         trigger_groups = {}
         for group in groups:
@@ -292,7 +301,33 @@ class zbx_trigger:
         self.__DESCRIPTION=""
         self.__GROUPS=[]
         self.__SERVERALIAS=""
-                
+
+    def dump(self):
+        return ({ 'id': self.get_id(),
+                  'hostid': self.get_hostid(),
+                  'lastchange': self.get_lastchange(),
+                  'priority': self.get_priority(),
+                  'host': self.get_host(),
+                  'description': self.get_description(),
+                  'groups': self.get_groups(),
+                  'serveralias': self.get_serveralias()
+                })
+
+    def load(self, data):
+        try:
+            self.set_id(data['id'])
+            self.set_hostid(data['hostid'])
+            self.set_lastchange(data['lastchange'])
+            self.set_priority(data['priority'])
+            self.set_host(data['host'])
+            self.set_description(data['description'])
+            self.set_groups(data['groups'])
+            self.set_serveralias(data['serveralias'])
+        except:
+            return False
+
+        return True
+
     def get_id(self):
         return self.__ID
 

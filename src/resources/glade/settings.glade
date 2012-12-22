@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <interface>
-  <requires lib="gtk+" version="2.22"/>
+  <!-- interface-requires gtk+ 3.0 -->
   <object class="GtkAdjustment" id="ackafterseconds">
     <property name="upper">900</property>
     <property name="step_increment">30</property>
@@ -80,6 +80,24 @@
       </row>
     </data>
   </object>
+  <object class="GtkListStore" id="ls_server_types">
+    <columns>
+      <!-- column-name typeid -->
+      <column type="guint"/>
+      <!-- column-name type -->
+      <column type="gchararray"/>
+    </columns>
+    <data>
+      <row>
+        <col id="0">1</col>
+        <col id="1" translatable="yes">Zabbix Server</col>
+      </row>
+      <row>
+        <col id="0">2</col>
+        <col id="1" translatable="yes">GTK Zabbix</col>
+      </row>
+    </data>
+  </object>
   <object class="GtkListStore" id="ls_servers">
     <columns>
       <!-- column-name alias -->
@@ -90,6 +108,8 @@
       <column type="gchararray"/>
       <!-- column-name enabled -->
       <column type="guint"/>
+      <!-- column-name type -->
+      <column type="gchararray"/>
     </columns>
   </object>
   <object class="GtkListStore" id="ls_zbxchsrv"/>
@@ -234,10 +254,12 @@
                 <child>
                   <object class="GtkCheckButton" id="cb_serverenabled">
                     <property name="label" translatable="yes">Enabled</property>
+                    <property name="use_action_appearance">False</property>
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
                     <property name="receives_default">False</property>
                     <property name="use_action_appearance">False</property>
+                    <property name="xalign">0.5</property>
                     <property name="image_position">right</property>
                     <property name="draw_indicator">True</property>
                     <signal name="toggled" handler="on_cb_serverenabled_toggled" swapped="no"/>
@@ -247,6 +269,32 @@
                     <property name="fill">True</property>
                     <property name="position">8</property>
                   </packing>
+                </child>
+                <child>
+                  <placeholder/>
+                </child>
+                <child>
+                  <object class="GtkComboBox" id="cbx_servertype">
+                    <property name="visible">True</property>
+                    <property name="can_focus">False</property>
+                    <property name="model">ls_server_types</property>
+                    <property name="active">0</property>
+                    <signal name="changed" handler="on_cbx_servertype_changed" swapped="no"/>
+                    <child>
+                      <object class="GtkCellRendererText" id="cellrenderertext5"/>
+                      <attributes>
+                        <attribute name="text">1</attribute>
+                      </attributes>
+                    </child>
+                  </object>
+                  <packing>
+                    <property name="expand">True</property>
+                    <property name="fill">True</property>
+                    <property name="position">10</property>
+                  </packing>
+                </child>
+                <child>
+                  <placeholder/>
                 </child>
               </object>
               <packing>
@@ -284,6 +332,7 @@
             <child>
               <object class="GtkButton" id="bt_servers_save">
                 <property name="label" translatable="yes">Save</property>
+                <property name="use_action_appearance">False</property>
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">True</property>
@@ -313,6 +362,7 @@
             <child>
               <object class="GtkButton" id="bt_servers_cancel">
                 <property name="label" translatable="yes">Cancel</property>
+                <property name="use_action_appearance">False</property>
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">True</property>
@@ -389,7 +439,7 @@
                             <property name="clickable">True</property>
                             <property name="reorderable">True</property>
                             <property name="sort_indicator">True</property>
-                            <property name="sort_column_id">3</property>
+                            <property name="sort_column_id">0</property>
                             <child>
                               <object class="GtkCellRendererToggle" id="cellrenderertoggle1">
                                 <property name="sensitive">False</property>
@@ -407,7 +457,7 @@
                             <property name="clickable">True</property>
                             <property name="reorderable">True</property>
                             <property name="sort_indicator">True</property>
-                            <property name="sort_column_id">0</property>
+                            <property name="sort_column_id">1</property>
                             <child>
                               <object class="GtkCellRendererText" id="cellrenderertext1"/>
                               <attributes>
@@ -423,7 +473,7 @@
                             <property name="clickable">True</property>
                             <property name="reorderable">True</property>
                             <property name="sort_indicator">True</property>
-                            <property name="sort_column_id">1</property>
+                            <property name="sort_column_id">2</property>
                             <child>
                               <object class="GtkCellRendererText" id="cellrenderertext3"/>
                               <attributes>
@@ -439,11 +489,27 @@
                             <property name="clickable">True</property>
                             <property name="reorderable">True</property>
                             <property name="sort_indicator">True</property>
-                            <property name="sort_column_id">2</property>
+                            <property name="sort_column_id">3</property>
                             <child>
                               <object class="GtkCellRendererText" id="cellrenderertext4"/>
                               <attributes>
                                 <attribute name="text">2</attribute>
+                              </attributes>
+                            </child>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkTreeViewColumn" id="type">
+                            <property name="resizable">True</property>
+                            <property name="title" translatable="yes">Type</property>
+                            <property name="clickable">True</property>
+                            <property name="reorderable">True</property>
+                            <property name="sort_indicator">True</property>
+                            <property name="sort_column_id">4</property>
+                            <child>
+                              <object class="GtkCellRendererText" id="cellrenderertext6"/>
+                              <attributes>
+                                <attribute name="text">4</attribute>
                               </attributes>
                             </child>
                           </object>
@@ -478,6 +544,7 @@
                     <child>
                       <object class="GtkButton" id="bt_addserver">
                         <property name="label" translatable="yes">Add Server</property>
+                        <property name="use_action_appearance">False</property>
                         <property name="visible">True</property>
                         <property name="can_focus">True</property>
                         <property name="receives_default">True</property>
@@ -507,6 +574,7 @@
                     <child>
                       <object class="GtkButton" id="bt_delserver">
                         <property name="label" translatable="yes">Delete Server</property>
+                        <property name="use_action_appearance">False</property>
                         <property name="visible">True</property>
                         <property name="can_focus">True</property>
                         <property name="receives_default">True</property>
@@ -536,6 +604,7 @@
                     <child>
                       <object class="GtkButton" id="bt_editserver">
                         <property name="label" translatable="yes">Edit Server</property>
+                        <property name="use_action_appearance">False</property>
                         <property name="visible">True</property>
                         <property name="sensitive">False</property>
                         <property name="can_focus">True</property>
@@ -689,10 +758,12 @@
                     <child>
                       <object class="GtkCheckButton" id="showdashboardinit">
                         <property name="label" translatable="yes">Show dashboard on init</property>
+                        <property name="use_action_appearance">False</property>
                         <property name="visible">True</property>
                         <property name="can_focus">True</property>
                         <property name="receives_default">False</property>
                         <property name="use_action_appearance">False</property>
+                        <property name="xalign">0.5</property>
                         <property name="yalign">0.50999999046325684</property>
                         <property name="draw_indicator">True</property>
                       </object>
@@ -745,10 +816,12 @@
                     <child>
                       <object class="GtkCheckButton" id="ackalloninit">
                         <property name="label" translatable="yes">ACK All on init</property>
+                        <property name="use_action_appearance">False</property>
                         <property name="visible">True</property>
                         <property name="can_focus">True</property>
                         <property name="receives_default">False</property>
                         <property name="use_action_appearance">False</property>
+                        <property name="xalign">0.5</property>
                         <property name="yalign">0.50999999046325684</property>
                         <property name="draw_indicator">True</property>
                       </object>
@@ -943,10 +1016,12 @@
                     <child>
                       <object class="GtkCheckButton" id="soundenable">
                         <property name="label" translatable="yes">Sounds enabled</property>
+                        <property name="use_action_appearance">False</property>
                         <property name="visible">True</property>
                         <property name="can_focus">True</property>
                         <property name="receives_default">False</property>
                         <property name="use_action_appearance">False</property>
+                        <property name="xalign">0.5</property>
                         <property name="draw_indicator">True</property>
                       </object>
                       <packing>
@@ -1163,10 +1238,12 @@ less than this amount of seconds:</property>
                     <child>
                       <object class="GtkCheckButton" id="sounddelete">
                         <property name="label" translatable="yes">Sound on delete</property>
+                        <property name="use_action_appearance">False</property>
                         <property name="visible">True</property>
                         <property name="can_focus">True</property>
                         <property name="receives_default">False</property>
                         <property name="use_action_appearance">False</property>
+                        <property name="xalign">0.5</property>
                         <property name="draw_indicator">True</property>
                       </object>
                       <packing>
@@ -1322,10 +1399,12 @@ less than this amount of seconds:</property>
                 <child type="label">
                   <object class="GtkCheckButton" id="cb_enablenotify">
                     <property name="label" translatable="yes">Enable</property>
+                    <property name="use_action_appearance">False</property>
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
                     <property name="receives_default">False</property>
                     <property name="use_action_appearance">False</property>
+                    <property name="xalign">0.5</property>
                     <property name="draw_indicator">True</property>
                     <signal name="toggled" handler="on_cb_enablenotify_toggled" swapped="no"/>
                   </object>
@@ -1392,6 +1471,7 @@ less than this amount of seconds:</property>
                     <child>
                       <object class="GtkButton" id="bt_addserver1">
                         <property name="label" translatable="yes">Add Server</property>
+                        <property name="use_action_appearance">False</property>
                         <property name="visible">True</property>
                         <property name="can_focus">True</property>
                         <property name="receives_default">True</property>
@@ -1420,6 +1500,7 @@ less than this amount of seconds:</property>
                     <child>
                       <object class="GtkButton" id="bt_delserver1">
                         <property name="label" translatable="yes">Delete Server</property>
+                        <property name="use_action_appearance">False</property>
                         <property name="visible">True</property>
                         <property name="can_focus">True</property>
                         <property name="receives_default">True</property>
@@ -1448,6 +1529,7 @@ less than this amount of seconds:</property>
                     <child>
                       <object class="GtkButton" id="bt_editserver1">
                         <property name="label" translatable="yes">Edit Server</property>
+                        <property name="use_action_appearance">False</property>
                         <property name="visible">True</property>
                         <property name="sensitive">False</property>
                         <property name="can_focus">True</property>
@@ -1526,6 +1608,7 @@ less than this amount of seconds:</property>
             <child>
               <object class="GtkButton" id="bt_save">
                 <property name="label" translatable="yes">Save</property>
+                <property name="use_action_appearance">False</property>
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">True</property>
@@ -1556,6 +1639,7 @@ less than this amount of seconds:</property>
             <child>
               <object class="GtkButton" id="bt_Cancel">
                 <property name="label" translatable="yes">Cancel</property>
+                <property name="use_action_appearance">False</property>
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">True</property>

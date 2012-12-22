@@ -82,7 +82,7 @@ class confthread(threading.Thread):
         except:
             self.persistent_db_cursor.executescript("""
             CREATE TABLE servers (
-                'alias', 'uri', 'username', 'password', 'enabled'
+                'alias', 'uri', 'username', 'password', 'enabled', 'server_type'
             );
             
             CREATE TABLE settings (
@@ -125,6 +125,7 @@ class confthread(threading.Thread):
         username = kwargs["username"]
         password = kwargs["password"]
         enabled = kwargs["enabled"]
+        server_type = kwargs["server_type"]
 
         try:
             if self.__get_total_servers__(enabled=None) == 0:
@@ -134,15 +135,16 @@ class confthread(threading.Thread):
             pprint(e)
 
         if len(servers) == 0:
-            self.persistent_db_cursor.execute("INSERT INTO servers VALUES (?, ?, ?, ?, ?)",
-                                ( alias, uri, username, self.set_password(password), enabled ))
+            self.persistent_db_cursor.execute("INSERT INTO servers VALUES (?, ?, ?, ?, ?, ?)",
+                                ( alias, uri, username, self.set_password(password), enabled, server_type ))
         else:
             for server in servers:
                 if not (server['uri'] == uri and \
                         server['username'] == username and \
                         self.check_password(password, server['password']) and \
-                        server['enabled'] == enabled):
-                    self.__mod_server__(alias=alias, uri=uri, username=username, password=self.set_password(password), enabled=enabled)
+                        server['enabled'] == enabled and \
+                        server['server_type'] == server_type):
+                    self.__mod_server__(alias=alias, uri=uri, username=username, password=self.set_password(password), enabled=enabled, server_type=server_type)
 
     def __mod_server__(self, *args, **kwargs):
         alias = kwargs["alias"]
@@ -150,9 +152,11 @@ class confthread(threading.Thread):
         username = kwargs["username"]
         password = kwargs["password"]
         enabled = kwargs["enabled"]
+        server_type = kwargs["server_type"]
 
-        return self.persistent_db_cursor.execute("UPDATE servers SET uri=?, username=?, password=?, enabled=? WHERE alias=?",
-                             (uri, username, password, enabled, alias))
+        print("Server type: %d" % server_type)
+        return self.persistent_db_cursor.execute("UPDATE servers SET uri=?, username=?, password=?, enabled=?, server_type=? WHERE alias=?",
+                             (uri, username, password, enabled, server_type, alias))
     
     def __del_server__(self, *args, **kwargs):
         alias = kwargs["alias"]
@@ -184,11 +188,12 @@ class confthread(threading.Thread):
         self.SERVERS = []
         for server in self.persistent_db_cursor.fetchall():
             self.SERVERS.append({'alias': server[self.SERVERS_COLUMNS['alias']],
-                                                                       'uri': server[self.SERVERS_COLUMNS['uri']],
-                                                                       'username': server[self.SERVERS_COLUMNS['username']], 
-                                                                       'password': server[self.SERVERS_COLUMNS['password']], 
-                                                                       'enabled': server[self.SERVERS_COLUMNS['enabled']]}
-                                                                       )
+                                   'uri': server[self.SERVERS_COLUMNS['uri']],
+                                   'username': server[self.SERVERS_COLUMNS['username']], 
+                                   'password': server[self.SERVERS_COLUMNS['password']], 
+                                   'enabled': server[self.SERVERS_COLUMNS['enabled']],
+                                   'server_type': server[self.SERVERS_COLUMNS['server_type']]}
+                               )
 
     def __get_total_servers__(self, *args, **kwargs):
         enabled = kwargs["enabled"]

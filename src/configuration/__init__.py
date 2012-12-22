@@ -31,9 +31,10 @@ except Exception as e:
 
 class configuration(confthread.confthread):
 
-    OLDCONFIG=os.path.expanduser('~') + "/.GTKZabbixNotify.sqlite"
-    NEWCONFIG=os.path.expanduser('~') + "/.GTKZabbix.sqlite"
-    SERVERS_COLUMNS={'alias': 0, 'uri': 1, 'username': 2, 'password': 3, 'enabled': 4}
+    OLDCONFIG = os.path.expanduser('~') + "/.GTKZabbixNotify.sqlite"
+    NEWCONFIG = os.path.expanduser('~') + "/.GTKZabbix.sqlite"
+    SERVERS_COLUMNS = { 'alias': 0, 'uri': 1, 'username': 2, 'password': 3, 'enabled': 4, 'server_type': 5 }
+    SERVERS_TYPE = [ "Zabbix Server", "GTKZabbix" ]
     SERVERS = []
 
     def __init__(self, conf_in_q, conf_out_q):
@@ -49,12 +50,12 @@ class configuration(confthread.confthread):
         super(configuration, self).__init__(conf_in_q, conf_out_q)
 
     # confthread methods wrappers
-    def set_server(self, alias, uri, username, password, enabled):
-        self.conf_in_q.put(["__set_server__", {"alias": alias, "uri": uri, "username": username, "password": password, "enabled": enabled }])
+    def set_server(self, alias, uri, username, password, enabled, server_type):
+        self.conf_in_q.put(["__set_server__", {"alias": alias, "uri": uri, "username": username, "password": password, "enabled": enabled, "server_type": server_type }])
         return self.conf_out_q.get()
 
-    def mod_server(self, alias, uri, username, password, enabled):
-        self.conf_in_q.put(["__mod_server__", {"alias": alias, "uri": uri, "username": username, "password": password, "enabled": enabled }])
+    def mod_server(self, alias, uri, username, password, enabled, server_type):
+        self.conf_in_q.put(["__mod_server__", {"alias": alias, "uri": uri, "username": username, "password": password, "enabled": enabled, "server_type": server_type }])
         return self.conf_out_q.get()
 
     def del_server(self, alias):

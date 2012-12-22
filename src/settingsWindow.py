@@ -31,9 +31,9 @@ except Exception as e:
 
 # Custom modules
 try:
-    from libs.configuration import configuration
-    from libs.zabbix import zbx_priorities
-    from libs.resource_path import resource_path
+    from configuration import configuration
+    from zabbix import zbx_priorities
+    from misc import resource_path
 except Exception as e:
     print "Error loading custom modules: {0}".format(e)
     sys.exit(1)
@@ -62,6 +62,7 @@ class settingsWindow:
         self.txt_serverusername = self.settingsBuilder.get_object("txt_serverusername")
         self.txt_serverpassword = self.settingsBuilder.get_object("txt_serverpassword")
         self.cb_serverenabled = self.settingsBuilder.get_object("cb_serverenabled")
+        self.cbx_servertype = self.settingsBuilder.get_object("cbx_servertype")
         self.bt_editserver = self.settingsBuilder.get_object("bt_editserver")
         self.bt_addserver = self.settingsBuilder.get_object("bt_addserver")
         self.bt_delserver = self.settingsBuilder.get_object("bt_delserver")
@@ -85,6 +86,7 @@ class settingsWindow:
            'on_txt_serverusername_changed': self.server_field_changed,
            'on_txt_serverpassword_changed': self.server_field_changed,
            'on_cb_serverenabled_toggled': self.server_field_changed,
+           'on_cbx_servertype_changed': self.server_field_changed,
            'on_bt_delserver_clicked': self.server_delete,
            'on_bt_addserver_clicked': self.server_add,
            'on_cb_enablenotify_toggled': self.enablenotify_changes,
@@ -136,7 +138,7 @@ class settingsWindow:
         self.servers_liststore.clear()
         servers = self.conf.get_servers()
         for server in servers:
-            self.servers_liststore.append([server['alias'], server['uri'], server['username'], server['enabled']])
+            self.servers_liststore.append([server['alias'], server['uri'], server['username'], server['enabled'], self.conf.SERVERS_TYPE[server['server_type']]])
         
     def save(self, widget, data = None):
         for setting in self.__SETTINGS_LIST:
@@ -172,12 +174,13 @@ class settingsWindow:
     def servers_save(self, widget, data = None):
         self.conf.set_server(self.txt_serveralias.get_text() , self.txt_serveruri.get_text(),
                              self.txt_serverusername.get_text(), self.txt_serverpassword.get_text(),
-                             self.cb_serverenabled.get_active())
+                             self.cb_serverenabled.get_active(), self.cbx_servertype.get_active())
         self.txt_serveralias.modify_base(gtk.STATE_NORMAL, gtk.gdk.color_parse("#FFFFFF"))
         self.txt_serverpassword.modify_base(gtk.STATE_NORMAL, gtk.gdk.color_parse("#FFFFFF"))
         self.txt_serveruri.modify_base(gtk.STATE_NORMAL, gtk.gdk.color_parse("#FFFFFF"))
         self.txt_serverusername.modify_base(gtk.STATE_NORMAL, gtk.gdk.color_parse("#FFFFFF"))
         self.cb_serverenabled.modify_base(gtk.STATE_NORMAL, gtk.gdk.color_parse("#FFFFFF"))
+        self.cbx_servertype.modify_base(gtk.STATE_NORMAL, gtk.gdk.color_parse("#FFFFFF"))
         self.fill_servers_list()
         self.serversWindow.hide()
 
@@ -200,6 +203,12 @@ class settingsWindow:
             self.txt_serverusername.modify_base(gtk.STATE_NORMAL, gtk.gdk.color_parse("#FFFFFF"))
             self.cb_serverenabled.set_active(selectedServer['enabled'])
             self.cb_serverenabled.modify_base(gtk.STATE_NORMAL, gtk.gdk.color_parse("#FFFFFF"))
+            if selectedServer['server_type'] == None:
+                self.cbx_servertype.set_active(0)
+            else:
+                self.cbx_servertype.set_active(selectedServer['server_type'])
+            self.cbx_servertype.modify_base(gtk.STATE_NORMAL, gtk.gdk.color_parse("#FFFFFF"))
+
             self.serversWindow.show()
     
     def server_delete(self, widget, data = None):
@@ -220,6 +229,8 @@ class settingsWindow:
         self.txt_serverusername.modify_base(gtk.STATE_NORMAL, gtk.gdk.color_parse("#FFFFFF"))
         self.cb_serverenabled.set_active(False)
         self.cb_serverenabled.modify_base(gtk.STATE_NORMAL, gtk.gdk.color_parse("#FFFFFF"))
+        # self.cbx_servertype.set_active(0)
+        self.cbx_servertype.modify_base(gtk.STATE_NORMAL, gtk.gdk.color_parse("#FFFFFF"))
         self.serversWindow.show()
 
     def enablenotify_changes(self, widget, data = None):

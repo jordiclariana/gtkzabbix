@@ -54,13 +54,13 @@ except Exception as e:
     print ("Error loading audio modules: {0}".format(e))
     sys.exit(1)
 
-from libs.configuration import configuration
 # Custom modules
 try:
-    #from libs.configuration import configuration
-    from libs.zabbix_api import ZabbixAPI, ZabbixAPIException
-    from libs.zabbix import zbx_connections, zbx_priorities, zbx_connections, resource_path, zbx_triggers
-    from libs.views import zbx_listview, zbx_groupview
+    from configuration import configuration
+    from zabbix.api import ZabbixAPI, ZabbixAPIException
+    from zabbix import zbx_connections, zbx_priorities, zbx_connections, zbx_triggers
+    from misc import resource_path
+    from views import zbx_listview, zbx_groupview
     from settingsWindow import settingsWindow
     #import notify
 except Exception as e:
@@ -70,6 +70,7 @@ except Exception as e:
 # Debugging
 try:
     from pprint import pprint
+    import json
 except Exception as e:
     print ("Error loading debugging modules: {0}".format(e))
     sys.exit(1)
@@ -236,108 +237,6 @@ class GTKZabbix:
         # Save the new font
         self.conf_main.set_setting('font', adj_fontsize.get_value())
 
-    def append_zbx_trigger(self, trigger, alias):
-        adj_fontsize = self.builder.get_object("adj_fontsize")
-        self.list_zabbix_store.append([
-            int(trigger.get('triggerid')),
-            int(trigger.get('hostid')),
-            int(trigger.get('lastchange')),
-            int(trigger.get('priority')),
-            trigger.get('host'),
-            trigger.get('description'),
-            datetime.datetime.fromtimestamp(int(trigger.get('lastchange'))).strftime('%Y-%m-%d %H:%M:%S'),
-            zbx_priorities(trigger.get('priority')).get_text(),
-            zbx_priorities(trigger.get('priority')).get_color(0),
-            zbx_priorities(trigger.get('priority')).get_color(1),
-            0,
-            alias,
-            int(adj_fontsize.get_value())*1000]
-        )
-
-        # libNotify
-        #if ((time.time() - int(trigger.get('lastchange'))) < 300):
-        #    notify.notify(trigger.get('priority'), alias + ": " + trigger.get('host'), trigger.get('description'), 10)
-
-        print ("Add {0} - {1} - {2}".format(trigger.get('triggerid'),
-            trigger.get('host'), trigger.get('description')))
-
-
-    def add_zbx_triggers(self, triggers):
-        # Get current triggers to compare with new ones in order to know if
-        # they have to be added or if in the other hand they already are in the list
-        iter = self.list_zabbix_store.get_iter_first()
-
-        if not iter and len(triggers)>0: # List is empty, adding all items
-            for trigger in triggers:
-                self.append_zbx_trigger(trigger[1], trigger[0])
-        else:
-            for trigger in triggers:
-                found = False
-                while iter:
-                    if self.list_zabbix_store.get_value(iter, LISTZABBIX['triggerid']) == int(trigger[1].get('triggerid')) and \
-                        self.list_zabbix_store.get_value(iter, LISTZABBIX['vzalias']) == trigger[0]:
-                        # Item already exist on the list
-                        found = True
-                        if self.list_zabbix_store.get_value(iter, LISTZABBIX['lastchange']) < int(trigger[1].get('lastchange')):
-                            # Update lastchange of this trigger
-                            self.list_zabbix_store.set_value(iter, LISTZABBIX['lastchange'], int(trigger[1].get('lastchange')))
-                        iter = self.list_zabbix_store.get_iter_first()
-                        break
-                    iter = self.list_zabbix_store.iter_next(iter)
-
-                if not found:
-                        # No item found, add it
-                        self.crm_change_display(True)
-                        self.append_zbx_trigger(trigger[1], trigger[0])
-                        # Start over again
-                        iter = self.list_zabbix_store.get_iter_first()
-
-    def del_zbx_triggers(self, triggers):
-        # Cleanup
-        deleted = False
-        iter = self.list_zabbix_store.get_iter_first()
-        while iter:
-            delete_flag = True
-            for trigger in triggers:
-                if int(self.list_zabbix_store.get_value(iter, LISTZABBIX['triggerid'])) == int(trigger[1].get('triggerid')) and \
-                 self.list_zabbix_store.get_value(iter, LISTZABBIX['vzalias']) == trigger[0]:
-                    delete_flag = False
-            if delete_flag:
-                print ("Delete {0} - {1} - {2}".format(self.list_zabbix_store.get_value(iter, LISTZABBIX['triggerid']),
-                      self.list_zabbix_store.get_value(iter, LISTZABBIX['host']), self.list_zabbix_store.get_value(iter, LISTZABBIX['description'])))
-                deleted = True
-                self.list_zabbix_store.remove(iter)
-                # Better get first iter again than keep on with current altered index
-                iter = self.list_zabbix_store.get_iter_first()
-            else:
-                iter = self.list_zabbix_store.iter_next(iter)
-        return deleted
-
-    def get_maxprio_zbx_triggers(self):
-        max_prio = -1
-        iter = self.list_zabbix_store.get_iter_first()
-        while iter:
-            cur_prio = int(self.list_zabbix_store.get_value(iter, LISTZABBIX['priority']))
-            cur_isack = int(self.list_zabbix_store.get_value(iter, LISTZABBIX['ack']))
-            if cur_prio > max_prio and cur_isack == 0:
-                max_prio = cur_prio
-            iter = self.list_zabbix_store.iter_next(iter)
-        return max_prio
-
-    def get_play_alarm_priority(self):
-        max_prio = -1
-        iter = self.list_zabbix_store.get_iter_first()
-        while iter:
-            cur_prio = int(self.list_zabbix_store.get_value(iter, LISTZABBIX['priority']))
-            cur_isack = bool(self.list_zabbix_store.get_value(iter, LISTZABBIX['ack']))
-            cur_timestamps = int(self.list_zabbix_store.get_value(iter, LISTZABBIX['lastchange']))
-            diff_time = (time.time() - cur_timestamps)
-            if diff_time <= self.conf_main.get_setting('playsoundiftriggerlastchange') and cur_prio > max_prio \
-                and cur_isack == False and cur_prio >= self.conf_main.get_setting('playifprio'):
-                max_prio = cur_prio
-            iter = self.list_zabbix_store.iter_next(iter)
-        return max_prio
-
     def auto_ack(self, seconds):
         if seconds == 0:
             return
@@ -348,62 +247,6 @@ class GTKZabbix:
             if (cur_time - self.list_zabbix_store.get_value(iter, LISTZABBIX['lastchange'])) > seconds:
                 self.list_zabbix_store.set_value(iter, LISTZABBIX['ack'], 1)
             iter = self.list_zabbix_store.iter_next(iter)
-
-    def get_zbx_triggers(self):
-        triggers = []
-        self.zbxConnections.recheck()
-        for zAPIAlias, zAPIConn in self.zbxConnections.connections():
-            if not zAPIConn.logged_in():
-                triggers.append([ zAPIAlias,
-                    {u'comments': u'',
-                     u'dep_level': u'0',
-                     u'description': u'Zabbix Server {0} is unreachable'.format(zAPIAlias),
-                     u'error': u'',
-                     u'expression': u'0',
-                     u'host': zAPIAlias,
-                     u'hostid': u'0',
-                     u'hosts': [{u'hostid': u'0'}],
-                     u'lastchange': u'0',
-                     u'priority': u'4',
-                     u'status': u'0',
-                     u'templateid': u'0',
-                     u'triggerid': u'0',
-                     u'type': u'0',
-                     u'url': u'',
-                     u'value': u'1'}
-                ])
-                continue
-            triggers_list = []
-            try:
-                for trigger in zAPIConn.trigger.get(
-                    {'active' : True,
-                     'monitored': True,
-                     'sortfield': 'lastchange',
-                     'filter': {'value': 1},
-                     'withUnacknowledgedEvents': True,
-                     'skipDependent': False}):
-
-                    triggers_list.append(trigger.get('triggerid'))
-
-                this_trigger = zAPIConn.trigger.get(
-                    {'triggerids': triggers_list,
-                     'expandDescription': True,
-                     'output': 'extend',
-                     'expandData': True}
-                )
-
-                if type(this_trigger) is dict:
-                    for triggerid in this_trigger.keys():
-                        triggers.append([ zAPIAlias, this_trigger[triggerid] ])
-                elif type(this_trigger) is list:
-                    for trigger in this_trigger:
-                        triggers.append([ zAPIAlias, trigger ])
-                else:
-                    print ("Error parsing triggers. Not dict and not list. Is: {0}".format(type(this_trigger)))
-            except Exception as e:
-                print ("GTKZabbix | Unexpected error getting triggers from {0}:\n\t{1}".format(zAPIAlias, e))
-
-        return triggers
 
     def update_dashboard(self, once = False):
         self.zbxConnections = zbx_connections(self.conf_main)
@@ -420,7 +263,7 @@ class GTKZabbix:
             # Set threads_enter because we are going to change widgets properties on the wild using several threads.
             gtk.gdk.threads_enter()
             try:
-                if self.triggers.count() > 0:
+                if self.triggers.count() > 0: # We have triggers
                     self.group_zabbix_store.add_triggers(self.triggers)
                     self.list_zabbix_store.add_triggers(self.triggers)
                     self.crm_change_display(True)
@@ -472,6 +315,8 @@ class GTKZabbix:
             if once:
                 break
             # self.notify.notify(4, "Server Name", "Trigger description")
+            for t in self.triggers.get_triggers():
+                pprint(json.dumps(t.dump()))
             time.sleep(self.conf_main.get_setting('checkinterval'))
 
     def menu_setup(self):
