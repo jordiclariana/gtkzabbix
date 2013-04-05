@@ -248,6 +248,17 @@ class GTKZabbix:
                 self.list_zabbix_store.set_value(iter, LISTZABBIX['ack'], 1)
             iter = self.list_zabbix_store.iter_next(iter)
 
+    def get_maxprio_zbx_triggers(self):
+        max_prio = -1
+        iter = self.list_zabbix_store.get_iter_first()
+        while iter:
+            cur_prio = int(self.list_zabbix_store.get_value(iter, LISTZABBIX['priority']))
+            cur_isack = int(self.list_zabbix_store.get_value(iter, LISTZABBIX['ack']))
+            if cur_prio > max_prio and cur_isack == 0:
+                max_prio = cur_prio
+            iter = self.list_zabbix_store.iter_next(iter)
+        return max_prio
+
     def update_dashboard(self, once = False):
         self.zbxConnections = zbx_connections(self.conf_main)
         self.zbxConnections.init()
