@@ -57,8 +57,8 @@ except Exception as e:
 # Custom modules
 try:
     from configuration import configuration
-    from zabbix.api import ZabbixAPI, ZabbixAPIException
-    from zabbix import zbx_connections, zbx_priorities, zbx_connections, zbx_triggers
+    from zabbix.api import ZabbixAPI, ZabbixAPIException, ZabbixAPIEvent
+    from zabbix import zbx_connections, zbx_priorities, zbx_triggers
     from misc import resource_path
     from views import zbx_listview, zbx_groupview
     from settingsWindow import settingsWindow
@@ -134,6 +134,7 @@ class GTKZabbix:
         self.list_zabbix_store_ack.connect('toggled', self.ack_toggled_callback, self.list_zabbix_store)
 
         self.menu_setup()
+        self.right_click_menu_setup()
 
         if loaded_indicator:
             # The indicator!
@@ -189,15 +190,21 @@ class GTKZabbix:
         self.change_fontsize(None, None)
 
     def on_click(self, widget, event):
-        if event.button == 1 and event.type == gtk.gdk.BUTTON_PRESS:
-            myselection = widget.get_selection()
-            model, selection = myselection.get_selected()
-            if isinstance(selection, gtk.TreeIter):
-                # If click is not over a row, unselect everyrow.
-                x, y, mods = widget.get_bin_window().get_pointer()
-                if not widget.get_path_at_pos(x, y):
-                    myselection.unselect_all()
-    
+        if event.type == gtk.gdk.BUTTON_PRESS:
+            if event.button == 1 :
+                myselection = widget.get_selection()
+                model, selection = myselection.get_selected()
+                if isinstance(selection, gtk.TreeIter):
+                    # If click is not over a row, unselect every row.
+                    x, y, mods = widget.get_bin_window().get_pointer()
+                    if not widget.get_path_at_pos(x, y):
+                        myselection.unselect_all()
+            elif event.button == 3:
+                myselection = widget.get_selection()
+                model, selection = myselection.get_selected()
+                if isinstance(selection, gtk.TreeIter):
+                    self.rc_menu.popup(None, None, None, event.button, event.time)
+
         return False
 
     def keypress(self, widget, event = None):
@@ -326,8 +333,9 @@ class GTKZabbix:
             if once:
                 break
             # self.notify.notify(4, "Server Name", "Trigger description")
-            for t in self.triggers.get_triggers():
-                pprint(json.dumps(t.dump()))
+            # Debugging only
+            #for t in self.triggers.get_triggers():
+            #    pprint(json.dumps(t.dump()))
             time.sleep(self.conf_main.get_setting('checkinterval'))
 
     def menu_setup(self):
@@ -353,6 +361,29 @@ class GTKZabbix:
         self.menu.append(self.settings_item)
         self.menu.append(self.ackall_item)
         self.menu.append(self.quit_item)
+
+    def right_click_menu_setup(self):
+        self.rc_menu = gtk.Menu()
+
+        self.rc_menu_ack = gtk.MenuItem("ACK on server")
+        self.rc_menu_ack.connect("activate", self.rc_menu_ack_action)
+        self.rc_menu_ack.show()
+        
+        self.rc_menu.append(self.rc_menu_ack)
+
+    def rc_menu_ack_action(self, event):
+        myselection = self.list_zabbix_model.get_selection()
+        model, selection = myselection.get_selected()
+        triggerid = self.list_zabbix_store.get_value(selection, LISTZABBIX['triggerid'])
+        alias = self.list_zabbix_store.get_value(selection, LISTZABBIX['vzalias'])
+        lastchange = self.list_zabbix_store.get_value(selection, LISTZABBIX['lastchange'])
+        this_connection = self.zbxConnections.get_connection(alias)
+        eventsids_tmp = this_connection.event.get({ 'triggerids': [ triggerid ], 'acknowledged': False, 'time_from': lastchange })
+        eventsids = []
+        for event in eventsids_tmp:
+            eventsids.append(event['eventid'])
+        pprint(eventsids)
+        this_connection.event.acknowledge({ 'eventids': eventsids, 'message': 'Acknowledged by GTKZabbix' })
 
     def tray_right_click_event(self, icon, button, time):
         self.menu.popup(None, None, gtk.status_icon_position_menu, button, time, self.tray)

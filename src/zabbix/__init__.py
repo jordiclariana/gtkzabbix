@@ -201,7 +201,8 @@ class zbx_triggers:
                      'sortfield': 'lastchange',
                      'filter': {'value': 1},
                      'skipDependent': True,
-                     'withUnacknowledgedEvents': False}):
+                     'withUnacknowledgedEvents': False,
+                     'withLastEventUnacknowledged': False }):
                     triggers_list.append(trigger.get('triggerid'))
         
                 this_trigger = zAPIConn.trigger.get(
