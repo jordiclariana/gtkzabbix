@@ -378,12 +378,19 @@ class GTKZabbix:
         alias = self.list_zabbix_store.get_value(selection, LISTZABBIX['vzalias'])
         lastchange = self.list_zabbix_store.get_value(selection, LISTZABBIX['lastchange'])
         this_connection = self.zbxConnections.get_connection(alias)
-        eventsids_tmp = this_connection.event.get({ 'triggerids': [ triggerid ], 'acknowledged': False, 'time_from': lastchange })
-        eventsids = []
-        for event in eventsids_tmp:
-            eventsids.append(event['eventid'])
-        pprint(eventsids)
-        this_connection.event.acknowledge({ 'eventids': eventsids, 'message': 'Acknowledged by GTKZabbix' })
+        if this_connection == None:
+            print ("rc_menu_ack_action | No connection found for alias: {0}".format(alias))
+        else:
+            try:
+                eventsids_tmp = this_connection.event.get({ 'triggerids': [ triggerid ], 'acknowledged': False, 'time_from': lastchange })
+                eventsids = []
+                for event in eventsids_tmp:
+                    eventsids.append(event['eventid'])
+                this_connection.event.acknowledge({ 'eventids': eventsids, 'message': 'Acknowledged by GTKZabbix' })
+            except ZabbixAPIException, e:
+                    sys.stderr.write(str(e) + '\n')
+            except Exception as e:
+                print ("rc_menu_ack_action | Unexpected error acknowledging events on {0}:\n\t{1}".format(alias,e))
 
     def tray_right_click_event(self, icon, button, time):
         self.menu.popup(None, None, gtk.status_icon_position_menu, button, time, self.tray)
