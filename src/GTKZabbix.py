@@ -240,20 +240,31 @@ class GTKZabbix:
 
         self.list_zabbix_store.change_fontsize(int(adj_fontsize.get_value())*1000)
         self.group_zabbix_store.change_fontsize(int(adj_fontsize.get_value())*1000)
-        
+
         # Save the new font
         self.conf_main.set_setting('font', adj_fontsize.get_value())
 
-    def auto_ack(self, seconds):
-        if seconds == 0:
-            return
-
-        cur_time = time.time()
+    def scroll_to_top(self):
         iter = self.list_zabbix_store.get_iter_first()
+        sort_column_id = self.list_zabbix_store.get_sort_column_id()
+        newer_iter = iter
+        iter = self.list_zabbix_store.iter_next(iter)
         while iter:
-            if (cur_time - self.list_zabbix_store.get_value(iter, LISTZABBIX['lastchange'])) > seconds:
-                self.list_zabbix_store.set_value(iter, LISTZABBIX['ack'], 1)
+            # Sort old iter and new one
+            sorted_iters = sorted(
+                        [ self.list_zabbix_store.get_value(iter, sort_column_id[0]),
+                          self.list_zabbix_store.get_value(newer_iter, sort_column_id[0]) ],
+                        reverse = False if sort_column_id[1] == gtk.SORT_ASCENDING else True)
+
+            # Update newer_iter (the one supposed to scroll to) if values differ.
+            if self.list_zabbix_store.get_value(newer_iter, sort_column_id[0]) != sorted_iters[0]:
+                newer_iter = iter
+
             iter = self.list_zabbix_store.iter_next(iter)
+
+        # Get newer iter path and scroll to it
+        newer_iter_path = self.list_zabbix_store.get_path(newer_iter)
+        self.list_zabbix_model.scroll_to_cell(newer_iter_path)
 
     def get_maxprio_zbx_triggers(self):
         max_prio = -1
@@ -307,6 +318,11 @@ class GTKZabbix:
                 self.conf_main.get_setting('playifprio'))
 
             self.lbl_lastupdated_num.set_text(datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
+
+            ### TODO: this should be an option in settings. ###
+            # Scroll to the top. Very useful if the triggers list exceeds the screen
+            # You always want to see the newer events, right?
+            self.scroll_to_top()
             # Leaving dangerous section
             gtk.gdk.threads_leave()
 
@@ -368,7 +384,7 @@ class GTKZabbix:
         self.rc_menu_ack = gtk.MenuItem("ACK on server")
         self.rc_menu_ack.connect("activate", self.rc_menu_ack_action)
         self.rc_menu_ack.show()
-        
+
         self.rc_menu.append(self.rc_menu_ack)
 
     def rc_menu_ack_action(self, event):
@@ -403,7 +419,7 @@ class GTKZabbix:
 
     def ackall(self, widget, data = None):
         self.list_zabbix_store.ackall()
-        
+
     def ack_toggled_callback(self, cell, path, model=None):
         iter = model.get_iter(path)
         model.set_value(iter, LISTZABBIX['ack'], not cell.get_active())
@@ -414,7 +430,7 @@ class GTKZabbix:
         else:
             self.window.present()
         return True
-        
+
     def hide(self, widget, data=None):
         self.show_item.set_active(False)
         return True
