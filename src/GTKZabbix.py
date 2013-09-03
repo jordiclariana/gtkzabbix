@@ -246,25 +246,26 @@ class GTKZabbix:
 
     def scroll_to_top(self):
         iter = self.list_zabbix_store.get_iter_first()
-        sort_column_id = self.list_zabbix_store.get_sort_column_id()
-        newer_iter = iter
-        iter = self.list_zabbix_store.iter_next(iter)
-        while iter:
-            # Sort old iter and new one
-            sorted_iters = sorted(
-                        [ self.list_zabbix_store.get_value(iter, sort_column_id[0]),
-                          self.list_zabbix_store.get_value(newer_iter, sort_column_id[0]) ],
-                        reverse = False if sort_column_id[1] == gtk.SORT_ASCENDING else True)
-
-            # Update newer_iter (the one supposed to scroll to) if values differ.
-            if self.list_zabbix_store.get_value(newer_iter, sort_column_id[0]) != sorted_iters[0]:
-                newer_iter = iter
-
+        if iter:
+            sort_column_id = self.list_zabbix_store.get_sort_column_id()
+            newer_iter = iter
             iter = self.list_zabbix_store.iter_next(iter)
+            while iter:
+                # Sort old iter and new one
+                sorted_iters = sorted(
+                            [ self.list_zabbix_store.get_value(iter, sort_column_id[0]),
+                              self.list_zabbix_store.get_value(newer_iter, sort_column_id[0]) ],
+                            reverse = False if sort_column_id[1] == gtk.SORT_ASCENDING else True)
 
-        # Get newer iter path and scroll to it
-        newer_iter_path = self.list_zabbix_store.get_path(newer_iter)
-        self.list_zabbix_model.scroll_to_cell(newer_iter_path)
+                # Update newer_iter (the one supposed to scroll to) if values differ.
+                if self.list_zabbix_store.get_value(newer_iter, sort_column_id[0]) != sorted_iters[0]:
+                    newer_iter = iter
+
+                iter = self.list_zabbix_store.iter_next(iter)
+
+            # Get newer iter path and scroll to it
+            newer_iter_path = self.list_zabbix_store.get_path(newer_iter)
+            self.list_zabbix_model.scroll_to_cell(newer_iter_path)
 
     def get_maxprio_zbx_triggers(self):
         max_prio = -1
